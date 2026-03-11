@@ -144,6 +144,21 @@ contract ChainReputation {
   event AvailabilityReported(bytes32 indexed deviceId, bool available, uint256 newScore);
   event DeviceDeactivated(bytes32 indexed deviceId);
 
+  function getReputation(bytes32 deviceId)
+  external
+  view
+  deviceExists(deviceId)
+  returns (
+    uint256 accuracy,
+    uint256 availability,
+    uint256 composite
+  ) {
+    Device memory device = devices[deviceId];
+    accuracy = device.accuracyScore;
+    availability = device.availabilityScore;
+    composite = (accuracy * 60 + availability * 40) / 100;
+  }
+
   function _min(uint256 a, uint256 b) internal pure returns (uint256) {
     return a < b ? a : b;
   }
