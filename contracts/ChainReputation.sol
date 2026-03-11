@@ -34,7 +34,22 @@ contract ChainReputation {
   }
 
   modifier onlyOracle() {
-      require(msg.sender == oracle, "Not authorized");
+      require(msg.sender == oracle, "Caller is not the oracle");
       _;
+  }
+
+  modifier onlyRegisteredOperator() {
+    require(operators[msg.sender].registered, "Caller is not a registered operator");
+    _;
+  }
+
+  modifier deviceExists(bytes32 deviceId) {
+    require(devices[deviceId].registeredAt != 0, "Device does not exist");
+    _;
+  }
+
+  modifier deviceIsActive(bytes32 deviceId) {
+    require(devices[deviceId].active, "Device is not active");
+    _;
   }
 }
