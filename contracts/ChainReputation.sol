@@ -20,6 +20,11 @@ contract ChainReputation {
     bool active;
   }
 
+  uint256 public constant ACCURACY_REWARD = 2;
+  uint256 public constant ACCURACY_PENALTY = 5;
+  uint256 public constant AVAILABILITY_REWARD = 1;
+  uint256 public constant AVAILABILITY_PENALTY = 3;
+
   address public oracle;
 
   mapping(address => Operator) public operators;
@@ -86,5 +91,44 @@ contract ChainReputation {
 
     operatorDevices[msg.sender].push(deviceId);
   }
+
+  function submitAccuracyReport(
+    bytes32 deviceId,
+    bool accurate
+  ) external onlyOracle deviceExists(deviceId) deviceIsActive(deviceId) {
+    Device storage device = devices[deviceId];
+
+    if (accurate) {
+      device.accuracyScore = _min(device.accuracyScore + ACCURACY_REWARD, 100);
+    } else {
+      device.accuracyScore = _safeSubtract(device.accuracyScore, ACCURACY_PENALTY);
+    }
+
+    device.totalReports++;
+  }
+
+  function submitAvailabilityReport(
+    bytes32 deviceId,
+    bool accurate
+  ) external onlyOracle deviceExists(deviceId) deviceIsActive(deviceId) {
+    Device storage device = devices[deviceId];
+
+    if (accurate) {
+      device.accuracyScore = _min(device.availabilityScore + AVAILABILITY_REWARD, 100);
+    } else {
+      device.accuracyScore = _safeSubtract(device.availabilityScore, AVAILABILITY_PENALTY);
+    }
+
+    device.totalReports++;
+  }
+
+  function _min(uint256 a, uint256 b) internal pure returns (uint256) {
+    return a < b ? a : b;
+  }
+
+  function _safeSubtract(uint256 a, uint256 b) internal pure returns (uint256) {
+    return a > b ? a - b : 0;
+  }
+
 
 }
