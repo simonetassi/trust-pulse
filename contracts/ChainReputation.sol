@@ -20,8 +20,14 @@ contract ChainReputation {
     bool active;
   }
 
-
   address public oracle;
+
+  mapping(address => Operator) public operators;
+
+  // deviceId = keccak256(wotEndpoint) -> avoiding incremental ids
+  mapping(bytes32 => Device) public devices;
+  
+  mapping(address => bytes32[]) public operatorDevices;
 
   constructor(address _oracle) {
       oracle = _oracle;
