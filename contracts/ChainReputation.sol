@@ -122,6 +122,12 @@ contract ChainReputation {
     device.totalReports++;
   }
 
+  function deactivateDevice(bytes32 deviceId) external onlyRegisteredOperator deviceExists(deviceId) deviceIsActive(deviceId) {
+    require(devices[deviceId].operator == msg.sender, "Only the device owner can deactivate it");
+
+    devices[deviceId].active = false;
+  }
+
   function _min(uint256 a, uint256 b) internal pure returns (uint256) {
     return a < b ? a : b;
   }
