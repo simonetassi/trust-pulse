@@ -64,4 +64,27 @@ contract ChainReputation {
     });
   }
 
+  function enrollDevice(
+    string calldata wotEndpoint,
+    string calldata deviceType
+  ) external onlyRegisteredOperator {
+    bytes32 deviceId = keccak256(abi.encodePacked(wotEndpoint));
+
+    require(devices[deviceId].registeredAt == 0, "Device already enrolled");
+    require(bytes(wotEndpoint).length > 0, "Endpoint can not be empty");
+
+    devices[deviceId] = Device({
+      operator: msg.sender,
+      wotEndpoint: wotEndpoint,
+      deviceType: deviceType,
+      accuracyScore: 50,
+      availabilityScore: 50,
+      totalReports: 0,
+      registeredAt: block.timestamp,
+      active: true
+    });
+
+    operatorDevices[msg.sender].push(deviceId);
+  }
+
 }
