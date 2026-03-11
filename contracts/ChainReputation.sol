@@ -52,4 +52,16 @@ contract ChainReputation {
     require(devices[deviceId].active, "Device is not active");
     _;
   }
+
+  function registerOperator(string calldata name) external {
+    require(!operators[msg.sender].registered, "Already registered");
+    require(bytes(name).length > 0, "Name can not be empty");
+
+    operators[msg.sender] = Operator({
+      name: name,
+      registered: true,
+      registeredAt: block.timestamp
+    });
+  }
+
 }
