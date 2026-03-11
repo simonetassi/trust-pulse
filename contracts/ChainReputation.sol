@@ -67,6 +67,8 @@ contract ChainReputation {
       registered: true,
       registeredAt: block.timestamp
     });
+
+    emit OperatorRegistered(msg.sender, name);
   }
 
   function enrollDevice(
@@ -90,6 +92,8 @@ contract ChainReputation {
     });
 
     operatorDevices[msg.sender].push(deviceId);
+
+    emit DeviceEnrolled(deviceId, msg.sender, wotEndpoint);
   }
 
   function submitAccuracyReport(
@@ -105,36 +109,47 @@ contract ChainReputation {
     }
 
     device.totalReports++;
+
+    emit AccuracyReported(deviceId, accurate, device.accuracyScore);
   }
 
   function submitAvailabilityReport(
     bytes32 deviceId,
-    bool accurate
+    bool available
   ) external onlyOracle deviceExists(deviceId) deviceIsActive(deviceId) {
     Device storage device = devices[deviceId];
 
-    if (accurate) {
-      device.accuracyScore = _min(device.availabilityScore + AVAILABILITY_REWARD, 100);
+    if (available) {
+      device.availabilityScore = _min(device.availabilityScore + AVAILABILITY_REWARD, 100);
     } else {
-      device.accuracyScore = _safeSubtract(device.availabilityScore, AVAILABILITY_PENALTY);
+      device.availabilityScore = _safeSubtract(device.availabilityScore, AVAILABILITY_PENALTY);
     }
 
     device.totalReports++;
+
+    emit AccuracyReported(deviceId, available, device.availabilityScore);
   }
 
   function deactivateDevice(bytes32 deviceId) external onlyRegisteredOperator deviceExists(deviceId) deviceIsActive(deviceId) {
     require(devices[deviceId].operator == msg.sender, "Only the device owner can deactivate it");
 
     devices[deviceId].active = false;
+
+    emit DeviceDeactivated(deviceId);
   }
+
+  event OperatorRegistered(address indexed operator, string name);
+  event DeviceEnrolled(bytes32 indexed deviceId, address indexed operator, string wotEndpoint);
+  event AccuracyReported(bytes32 indexed deviceId, bool accurate, uint256 newScore);
+  event AvailabilityReported(bytes32 indexed deviceId, bool available, uint256 newScore);
+  event DeviceDeactivated(bytes32 indexed deviceId);
 
   function _min(uint256 a, uint256 b) internal pure returns (uint256) {
     return a < b ? a : b;
   }
 
+  // not going below 0
   function _safeSubtract(uint256 a, uint256 b) internal pure returns (uint256) {
     return a > b ? a - b : 0;
   }
-
-
 }
