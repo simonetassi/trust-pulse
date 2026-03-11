@@ -27,6 +27,12 @@ contract ChainReputation {
 
   address public oracle;
 
+  event OperatorRegistered(address indexed operator, string name);
+  event DeviceEnrolled(bytes32 indexed deviceId, address indexed operator, string wotEndpoint);
+  event AccuracyReported(bytes32 indexed deviceId, bool accurate, uint256 newScore);
+  event AvailabilityReported(bytes32 indexed deviceId, bool available, uint256 newScore);
+  event DeviceDeactivated(bytes32 indexed deviceId);
+
   mapping(address => Operator) public operators;
 
   // deviceId = keccak256(wotEndpoint) -> avoiding incremental ids
@@ -127,7 +133,7 @@ contract ChainReputation {
 
     device.totalReports++;
 
-    emit AccuracyReported(deviceId, available, device.availabilityScore);
+    emit AvailabilityReported(deviceId, available, device.availabilityScore);
   }
 
   function deactivateDevice(bytes32 deviceId) external onlyRegisteredOperator deviceExists(deviceId) deviceIsActive(deviceId) {
@@ -137,12 +143,6 @@ contract ChainReputation {
 
     emit DeviceDeactivated(deviceId);
   }
-
-  event OperatorRegistered(address indexed operator, string name);
-  event DeviceEnrolled(bytes32 indexed deviceId, address indexed operator, string wotEndpoint);
-  event AccuracyReported(bytes32 indexed deviceId, bool accurate, uint256 newScore);
-  event AvailabilityReported(bytes32 indexed deviceId, bool available, uint256 newScore);
-  event DeviceDeactivated(bytes32 indexed deviceId);
 
   function getReputation(bytes32 deviceId)
     external
