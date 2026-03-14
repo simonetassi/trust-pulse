@@ -37,7 +37,7 @@ export class ContractService {
 
     const contractAddress = loadContractAddress(network);
 
-    this.contract = new ethers.Contract(contractAddress, artifact.abi. this.oracleWallet);
+    this.contract = new ethers.Contract(contractAddress, artifact.abi, this.oracleWallet);
 
     console.log(`Connected to contract at ${contractAddress}`);
   }
