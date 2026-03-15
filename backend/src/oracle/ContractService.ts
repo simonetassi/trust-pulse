@@ -1,4 +1,4 @@
-import { ethers } from "ethers";
+import { ethers, NonceManager } from "ethers";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -20,8 +20,9 @@ function loadContractAddress(network: string): string {
 
 export class ContractService {
   private contract: ethers.Contract;
-  private oracleWallet: ethers.Wallet;
   private provider: ethers.JsonRpcProvider;
+  private nonceManager: NonceManager; // ensuring nonce consistency
+  private txQueue: Promise<void> = Promise.resolve();
 
   public constructor() {
     const rpcUrl = process.env.RPC_URL ?? 'http://127.0.0.1:8545';
@@ -33,41 +34,54 @@ export class ContractService {
     }
 
     this.provider = new ethers.JsonRpcProvider(rpcUrl);
-    this.oracleWallet = new ethers.Wallet(oraclePrivateKey, this.provider);
+    const oracleWallet = new ethers.Wallet(oraclePrivateKey, this.provider);
+    this.nonceManager = new NonceManager(oracleWallet);
 
     const contractAddress = loadContractAddress(network);
 
-    this.contract = new ethers.Contract(contractAddress, artifact.abi, this.oracleWallet);
+    this.contract = new ethers.Contract(contractAddress, artifact.abi, this.nonceManager);
 
     console.log(`Connected to contract at ${contractAddress}`);
   }
 
-  // TODO add queuing to mitigate nonce conflict
+  // ensuring nonce consistency
+  private enqueue(
+    fnName: string,
+    deviceId: string,
+    fn: () => Promise<void>
+  ): Promise<void> {
+    const next = this.txQueue.then(fn).catch((error) => {
+      console.error(
+        `[ContractService] ${fnName} failed for ` +
+        `deviceId ${deviceId.slice(0, 10)}...:`,
+        error.message ?? error
+      );
+    });
+
+    this.txQueue = next;
+    return next;
+  }
 
   public async submitAccuracyReport(deviceId: string, accurate: boolean): Promise<void> {
-    try {
+    this.enqueue('submitAccuracyReport', deviceId, async () => {
       const tx = await this.contract.submitAccuracyReport(deviceId, accurate);
       await tx.wait();
 
       console.log(`Accuracy report submitted` +
         `deviceId: ${deviceId.slice(0, 10)}... accurate: ${accurate} tx: ${tx.hash}`
       );
-    } catch (error) {
-      console.error('Failed to submit accuracy report: ' + error);
-    }
+    })
   }
 
   public async submitAvailabilityReport(deviceId: string, available: boolean): Promise<void> {
-    try {
-      const tx = await this.contract.submitAvaialabilityReport(deviceId, available);
+    this.enqueue('submitAvailabilityReport', deviceId, async () => {
+      const tx = await this.contract.submitAvailabilityReport(deviceId, available);
       await tx.wait();
 
       console.log(`Availability report submitted` +
         `deviceId: ${deviceId.slice(0, 10)}... available: ${available} tx: ${tx.hash}`
       );
-    } catch (error) {
-      console.error('Failed to submit availability report: ' + error);
-    }
+    })
   }
 
   public async getReputation(deviceId: string): Promise<{
