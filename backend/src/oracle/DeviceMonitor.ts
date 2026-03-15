@@ -28,7 +28,7 @@ export class DeviceMonitor {
     console.log(`[DeviceMonitor ${this.wotEndpoint}] Fetching Thing Description...`);
 
     const td = await WoT.requestThingDescription(this.wotEndpoint);
-    this.thing = WoT.consume(td);
+    this.thing = await WoT.consume(td);
 
     console.log(`[DeviceMonitor ${this.wotEndpoint}] Connected. Starting Monitoring`);
 
@@ -56,6 +56,14 @@ export class DeviceMonitor {
       clearTimeout(this.heartbeatTimeout);
       this.heartbeatTimeout = null
     }
+
+    if (this.thing) {
+      try {
+        await this.thing.unsubscribeEvent("heartbeat");
+      } catch {
+      }
+    }
+  
 
     await this.servient.shutdown();
     console.log(`[DeviceMonitor ${this.wotEndpoint}] Stopped`);
