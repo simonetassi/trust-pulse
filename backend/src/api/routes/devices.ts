@@ -1,24 +1,5 @@
-import { ethers } from "ethers";
 import { Router, Request, Response } from "express";
-import * as fs from "fs";
-import * as path from "path";
-
-const artifactPath = path.join(__dirname, "../../../../blockchain/artifacts/contracts/ChainReputation.sol/ChainReputation.json");
-const deploymentsPath = path.join(__dirname, "../../../../deployments.json");
-
-function getContract(): ethers.Contract {
-    const network = process.env.NETWORK ?? 'localhost';
-    const rpcUrl = process.env.RPC_URL ?? 'http://127.0.0.1:8545';
-
-    const artifact = JSON.parse(fs.readFileSync(artifactPath, 'utf-8'));
-    const deployments = JSON.parse(fs.readFileSync(deploymentsPath, 'utf-8'));
-
-    const contractAddress = deployments[network]?.ChainReputation;
-
-    const provider = new ethers.JsonRpcProvider(rpcUrl);
-    
-    return new ethers.Contract(contractAddress, artifact.abi, provider);
-}
+import { getContract } from "../contractProvider";
 
 export const devicesRouter = Router();
 
