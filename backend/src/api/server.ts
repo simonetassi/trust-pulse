@@ -4,6 +4,7 @@ import { ContractEventListener } from './events/contractEvents';
 import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io' 
 import { devicesRouter } from './routes/devices';
+import { operatorsRouter } from './routes/operators';
 
 export function createApiServer(): {
   start: (port: number) => void;
@@ -24,6 +25,7 @@ export function createApiServer(): {
   app.use(express.json());
 
   app.use('/api/devices', devicesRouter);
+  app.use("/api/operators", operatorsRouter);
 
   io.on('connection', (socket) => {
     console.log(`[Socket.io] Client connected: ${socket.id}`);
