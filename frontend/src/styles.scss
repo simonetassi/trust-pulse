@@ -17,6 +17,32 @@
   --font-sans: "Inter", "system-ui", "sans-serif";
 }
 
+@layer components {
+  .card {
+    @apply bg-surface-secondary border border-surface-border rounded-xl p-6;
+  }
+
+  .label {
+    @apply text-xs font-medium text-muted uppercase tracking-widest;
+  }
+
+  .score-track {
+    @apply w-full h-1.5 bg-surface-border rounded-full overflow-hidden;
+  }
+
+  .score-fill {
+    @apply h-full rounded-full transition-all duration-700 ease-out;
+  }
+
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .hash {
+    @apply font-mono text-xs text-muted truncate;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
