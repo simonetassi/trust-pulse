@@ -13,7 +13,7 @@ export class ReputationCard {
   @Input({ required: true }) 
   public device!: Device;
 
-  get deviceLabel(): string {
+  public get deviceLabel(): string {
     return this.device.wotEndpoint.split('/').pop()
       ?? this.device.deviceId.slice(0, 8);
   }
