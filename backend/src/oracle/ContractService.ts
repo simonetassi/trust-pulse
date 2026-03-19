@@ -67,7 +67,7 @@ export class ContractService {
       const tx = await this.contract.submitAccuracyReport(deviceId, accurate);
       await tx.wait();
 
-      console.log(`Accuracy report submitted` +
+      console.log(`Accuracy report submitted ` +
         `deviceId: ${deviceId.slice(0, 10)}... accurate: ${accurate} tx: ${tx.hash}`
       );
     })
@@ -78,7 +78,7 @@ export class ContractService {
       const tx = await this.contract.submitAvailabilityReport(deviceId, available);
       await tx.wait();
 
-      console.log(`Availability report submitted` +
+      console.log(`Availability report submitted ` +
         `deviceId: ${deviceId.slice(0, 10)}... available: ${available} tx: ${tx.hash}`
       );
     })
