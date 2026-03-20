@@ -29,7 +29,16 @@
       </div>
     </div>
   </div>
-  @if (devices.length > 0) {
+  @if (error) {
+    <div class="card border-danger/30 text-sm text-danger">
+      {{ error }}
+    </div>
+  }
+  @if (isLoading) {
+    <div class="flex items-center justify-center py-24">
+      <div class="w-6 h-6 rounded-full border-2 border-surface-border border-t-accent animate-spin"></div>
+    </div>
+  } @else if (devices.length > 0) {
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       @for (device of devices; track device.deviceId) {
         <app-reputation-card [device]="device" />

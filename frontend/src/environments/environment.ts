@@ -4,4 +4,5 @@ export const environment = {
   wsUrl: '',
   network: 'sepolia',
   hardhatChainId: 1,
+  operatorAddress: '',
 };
