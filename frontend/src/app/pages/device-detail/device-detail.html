@@ -1,0 +1,163 @@
+
+<div class="flex flex-col gap-8">
+  <a routerLink="/dashboard"
+     class="flex items-center gap-2 text-sm text-muted hover:text-white
+            transition-colors duration-200 w-fit">
+    ← Network
+  </a>
+  @if (isLoading) {
+    <div class="flex items-center justify-center py-24">
+      <div class="w-6 h-6 rounded-full border-2 border-surface-border
+                  border-t-accent animate-spin">
+      </div>
+    </div>
+  }
+  @if (error) {
+    <div class="card border-danger/30 text-sm text-danger">
+      {{ error }}
+    </div>
+  }
+
+  @if (device && !isLoading) {
+    <div class="flex items-start justify-between">
+      <div class="flex flex-col gap-1">
+        <div class="flex items-center gap-3">
+          <h1 class="text-xl font-semibold">{{ deviceLabel }}</h1>
+          <div class="flex items-center gap-1.5">
+            <div class="status-dot"
+                 [class]="device.active ? 'bg-success' : 'bg-danger'">
+            </div>
+            <span class="text-xs text-muted">
+              {{ device.active ? 'active' : 'inactive' }}
+            </span>
+          </div>
+        </div>
+        <a class="hash" [href]="device.wotEndpoint" target="_blank">{{ device.wotEndpoint }}</a>
+      </div>
+      <span class="text-xs text-muted">
+        {{ device.totalReports }} reports
+      </span>
+    </div>
+    <div class="card grid grid-cols-2 sm:grid-cols-3 gap-6">
+      <div class="flex flex-col gap-1">
+        <span class="label">type</span>
+        <span class="text-sm text-white">{{ device.deviceType }}</span>
+      </div>
+      <div class="flex flex-col gap-1">
+        <span class="label">operator</span>
+        <span class="hash">{{ device.operator | slice:0:18 }}...</span>
+      </div>
+      <div class="flex flex-col gap-1">
+        <span class="label">enrolled</span>
+        <span class="text-sm text-white">
+          {{ device.registeredAt * 1000 | date:'mediumDate' }}
+        </span>
+      </div>
+      <div class="flex flex-col gap-1">
+        <span class="label">device id</span>
+        <span class="hash">{{ device.deviceId | slice:0:18 }}...</span>
+      </div>
+      <div class="flex flex-col gap-1">
+        <span class="label">wot endpoint</span>
+        <a class="hash" [href]="device.wotEndpoint" target="_blank">{{ device.wotEndpoint }}</a>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="card flex flex-col gap-4">
+        <span class="label">composite score</span>
+        <span class="text-4xl font-semibold"
+              [class]="scoreColor(device.compositeScore)">
+          {{ device.compositeScore }}
+        </span>
+        <div class="score-track">
+          <div class="score-fill"
+               [class]="scoreBarColor(device.compositeScore)"
+               [style.width.%]="device.compositeScore">
+          </div>
+        </div>
+        <span class="text-xs text-muted">accuracy × 60% + availability × 40%</span>
+      </div>
+      <div class="card flex flex-col gap-4">
+        <span class="label">accuracy score</span>
+        <span class="text-4xl font-semibold"
+              [class]="scoreColor(device.accuracyScore)">
+          {{ device.accuracyScore }}
+        </span>
+        <div class="score-track">
+          <div class="score-fill"
+               [class]="scoreBarColor(device.accuracyScore)"
+               [style.width.%]="device.accuracyScore">
+          </div>
+        </div>
+        <span class="text-xs text-muted">based on reading plausibility</span>
+      </div>
+      <div class="card flex flex-col gap-4">
+        <span class="label">availability score</span>
+        <span class="text-4xl font-semibold"
+              [class]="scoreColor(device.availabilityScore)">
+          {{ device.availabilityScore }}
+        </span>
+        <div class="score-track">
+          <div class="score-fill"
+               [class]="scoreBarColor(device.availabilityScore)"
+               [style.width.%]="device.availabilityScore">
+          </div>
+        </div>
+        <span class="text-xs text-muted">based on heartbeat regularity</span>
+      </div>
+    </div>
+    <div class="flex flex-col gap-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold">Report History</h2>
+      </div>
+      @if (isHistoryLoading) {
+        <div class="flex items-center justify-center py-12">
+          <div class="w-5 h-5 rounded-full border-2 border-surface-border
+                      border-t-accent animate-spin">
+          </div>
+        </div>
+      } @else if (history.length > 0) {
+        <div class="card flex flex-col divide-y divide-surface-border">
+          @for (entry of history; track entry.txHash) {
+            <div class="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+              <div class="flex items-center gap-3">
+                <div class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                     [class]="entry.type === 'accuracy' ? 'bg-accent' : 'bg-success'">
+                </div>
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-medium text-white">
+                    {{ entry.type === 'accuracy' ? 'Accuracy' : 'Availability' }}
+                    —
+                    @if (entry.type === 'accuracy') {
+                      <span [class]="entry.accurate ? 'text-success' : 'text-danger'">
+                        {{ entry.accurate ? 'accurate' : 'inaccurate' }}
+                      </span>
+                    } @else {
+                      <span [class]="entry.online ? 'text-success' : 'text-danger'">
+                        {{ entry.online ? 'online' : 'offline' }}
+                      </span>
+                    }
+                  </span>
+                  <span class="hash">{{ entry.txHash | slice:0:24 }}...</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-4">
+                <span class="text-sm font-semibold"
+                      [class]="scoreColor(entry.newScore)">
+                  {{ entry.newScore }}
+                </span>
+                <span class="text-xs text-muted w-14 text-right">
+                  {{ entry.blockNumber === 0 ? '-' : '#' + entry.blockNumber }}
+                </span>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="card flex items-center justify-center py-12">
+          <span class="text-sm text-muted">No reports yet.</span>
+        </div>
+      }
+    </div>
+  }
+</div>
