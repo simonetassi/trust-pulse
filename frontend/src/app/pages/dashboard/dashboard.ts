@@ -44,6 +44,7 @@ export class Dashboard implements OnInit, OnDestroy {
     .subscribe({
       next: (res) => {
         this.devices = res.devices;
+        this.sortDevices();
         this.isLoading = false;
       },
       error: (err) => {
@@ -64,6 +65,7 @@ export class Dashboard implements OnInit, OnDestroy {
         device.compositeScore = this.computeComposite(device.accuracyScore, device.availabilityScore);
         device.totalReports++;
       }
+      this.sortDevices();
     });
 
     const availabilitySub = this.socket.onAvailabilityReport().subscribe(event => {
@@ -72,6 +74,7 @@ export class Dashboard implements OnInit, OnDestroy {
         device.availabilityScore = event.newAvailabilityScore;
         device.compositeScore = this.computeComposite(device.accuracyScore, device.availabilityScore);
       }
+      this.sortDevices();
     });
 
     const deactivatedSub = this.socket.onDeviceDeactivated().subscribe(event => {
@@ -107,6 +110,12 @@ export class Dashboard implements OnInit, OnDestroy {
 
   public get activeCount(): number {
     return this.devices.filter(d => d.active).length;
+  }
+
+  private sortDevices(): void {
+    this.devices = [...this.devices].sort(
+      (a, b) => b.compositeScore - a.compositeScore
+    );
   }
 
   public scoreColor(score: number): string {
