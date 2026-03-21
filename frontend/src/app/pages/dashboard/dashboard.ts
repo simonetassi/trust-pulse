@@ -4,6 +4,7 @@ import { ReputationCard } from "./components/reputation-card/reputation-card";
 import { BackendService } from '../../../common/services/backend.service';
 import { Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { SocketService } from '../../../common/services/socket.service';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -13,14 +14,22 @@ import { environment } from '../../../environments/environment';
 })
 export class Dashboard implements OnInit, OnDestroy {
   public readonly backend = inject(BackendService);
+  public readonly socket = inject(SocketService);
   private subscription = new Subscription();
 
   public devices: Device[] = [];
   public isLoading: boolean = false;
   public error: string | null = null;
+  public isSocketConnected: boolean = false;
 
   public ngOnInit(): void {
     this.loadDevices();
+    this.listenSocketEvents();
+    
+    const connSub = this.socket.connected$.subscribe(connected => {
+      this.isSocketConnected = connected;
+    });
+    this.subscription.add(connSub);  
   }
 
   public ngOnDestroy(): void {
@@ -45,6 +54,41 @@ export class Dashboard implements OnInit, OnDestroy {
     });
 
     this.subscription.add(sub);
+  }
+
+  private listenSocketEvents(): void {
+    const accuracySub = this.socket.onAccuracyReport().subscribe(event => {
+      const device = this.devices.find(d => d.deviceId === event.deviceId);
+      if (device) {
+        device.accuracyScore = event.newAccuracyScore;
+        device.compositeScore = this.computeComposite(device.accuracyScore, device.availabilityScore);
+        device.totalReports++;
+      }
+    });
+
+    const availabilitySub = this.socket.onAvailabilityReport().subscribe(event => {
+      const device = this.devices.find(d => d.deviceId === event.deviceId);
+      if (device) {
+        device.availabilityScore = event.newAvailabilityScore;
+        device.compositeScore = this.computeComposite(device.accuracyScore, device.availabilityScore);
+      }
+    });
+
+    const deactivatedSub = this.socket.onDeviceDeactivated().subscribe(event => {
+      const device = this.devices.find(d => d.deviceId === event.deviceId);
+      if (device) {
+        device.active = false;
+      }
+    });
+
+    this.subscription.add(accuracySub);
+    this.subscription.add(availabilitySub);
+    this.subscription.add(deactivatedSub);
+  }
+
+  // TODO transfer this logic to backend??
+  private computeComposite(accuracy: number, availability: number): number {
+    return Math.round((accuracy * 60 + availability * 40) / 100);
   }
 
   public get avgAccuracy(): number {
