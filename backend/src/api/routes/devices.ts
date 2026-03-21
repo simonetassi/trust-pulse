@@ -34,13 +34,17 @@ devicesRouter.get('/:deviceId', async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Device not found" });
     }
 
+    const [accuracy, availability, composite] =
+      await contract.getReputation(deviceId);
+
     res.json({
       deviceId,
       operator: device.operator,
       wotEndpoint: device.wotEndpoint,
       deviceType: device.deviceType,
-      accuracyScore: Number(device.accuracyScore),
-      availabilityScore: Number(device.availabilityScore),
+      accuracyScore: Number(accuracy),
+      availabilityScore: Number(availability),
+      compositeScore: Number(composite),
       totalReports: Number(device.totalReports),
       registeredAt: Number(device.registeredAt),
       active: device.active,
