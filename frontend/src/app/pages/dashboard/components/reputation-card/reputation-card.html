@@ -1,0 +1,69 @@
+<div class="card flex flex-col gap-5 hover:border-accent/30
+            transition-colors duration-200 cursor-pointer"
+      [routerLink]="['/device', device.deviceId]">
+  <div class="flex items-start justify-between">
+    <div class="flex flex-col gap-1">
+      <span class="text-sm font-medium text-white">{{ deviceLabel }}</span>
+      <span class="hash">{{ device.deviceId | slice:0:18 }}...</span>
+    </div>
+    <div class="flex items-center gap-1.5">
+      <div class="status-dot"
+            [class]="device.active ? 'bg-success' : 'bg-danger'">
+      </div>
+      <span class="text-xs text-muted">
+        {{ device.active ? 'active' : 'inactive' }}
+      </span>
+    </div>
+  </div>
+  <div class="flex flex-col gap-2">
+    <div class="flex items-end justify-between">
+      <span class="label">composite</span>
+      <span class="text-xl font-semibold"
+            [class]="scoreColor(device.compositeScore)">
+        {{ device.compositeScore }}
+      </span>
+    </div>
+    <div class="score-track">
+      <div class="score-fill"
+            [class]="scoreBarColor(device.compositeScore)"
+            [style.width.%]="device.compositeScore">
+      </div>
+    </div>
+  </div>
+  <div class="grid grid-cols-2 gap-4">
+    <div class="flex flex-col gap-1.5">
+      <div class="flex items-center justify-between">
+        <span class="label">accuracy</span>
+        <span class="text-xs font-medium"
+              [class]="scoreColor(device.accuracyScore)">
+          {{ device.accuracyScore }}
+        </span>
+      </div>
+      <div class="score-track">
+        <div class="score-fill"
+              [class]="scoreBarColor(device.accuracyScore)"
+              [style.width.%]="device.accuracyScore">
+        </div>
+      </div>
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <div class="flex items-center justify-between">
+        <span class="label">availability</span>
+        <span class="text-xs font-medium"
+              [class]="scoreColor(device.availabilityScore)">
+          {{ device.availabilityScore }}
+        </span>
+      </div>
+      <div class="score-track">
+        <div class="score-fill"
+              [class]="scoreBarColor(device.availabilityScore)"
+              [style.width.%]="device.availabilityScore">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="flex items-center justify-between pt-1 border-t border-surface-border">
+    <span class="text-xs text-muted">{{ device.totalReports }} reports</span>
+    <span class="text-xs text-muted">{{ device.deviceType }}</span>
+  </div>
+</div>

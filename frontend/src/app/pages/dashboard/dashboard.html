@@ -1,0 +1,63 @@
+<div class="flex flex-col gap-8">
+  <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-1">
+      <h1 class="text-xl font-semibold">Network</h1>
+      <p class="text-sm text-muted">
+        {{ devices.length }} device{{ devices.length !== 1 ? 's' : '' }} enrolled
+      </p>
+    </div>
+    <div class="card flex items-center gap-6 py-3 px-5">
+      <div class="flex flex-col items-center gap-0.5">
+        <span class="label">avg accuracy</span>
+        <span class="text-sm font-semibold" [class]="scoreColor(avgAccuracy)">
+          {{ avgAccuracy }}
+        </span>
+      </div>
+      <div class="w-px h-6 bg-surface-border"></div>
+      <div class="flex flex-col items-center gap-0.5">
+        <span class="label">avg availability</span>
+        <span class="text-sm font-semibold" [class]="scoreColor(avgAvailability)">
+          {{ avgAvailability }}
+        </span>
+      </div>
+      <div class="w-px h-6 bg-surface-border"></div>
+      <div class="flex flex-col items-center gap-0.5">
+        <span class="label">active</span>
+        <span class="text-sm font-semibold text-white">
+          {{ activeCount }}/{{ devices.length }}
+        </span>
+      </div>
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <div class="status-dot"
+         [class]="isSocketConnected ? 'bg-success' : 'bg-muted'">
+    </div>
+    <span class="text-xs text-muted">
+      {{ isSocketConnected ? 'Live updates active' : 'Connecting...' }}
+    </span>
+  </div>
+  @if (error) {
+    <div class="card border-danger/30 text-sm text-danger">
+      {{ error }}
+    </div>
+  }
+  @if (isLoading) {
+    <div class="flex items-center justify-center py-24">
+      <div class="w-6 h-6 rounded-full border-2 border-surface-border border-t-accent animate-spin"></div>
+    </div>
+  } @else if (devices.length > 0) {
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      @for (device of devices; track device.deviceId) {
+        <app-reputation-card [device]="device" />
+      }
+    </div>
+  } @else {
+    <div class="flex flex-col items-center justify-center gap-3 py-24 text-center">
+      <p class="text-sm text-muted">No devices enrolled yet.</p>
+      <a routerLink="/operator" class="text-xs text-accent hover:underline">
+        Enroll a device
+      </a>
+    </div>
+  }
+</div>
