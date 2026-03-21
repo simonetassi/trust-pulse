@@ -28,7 +28,7 @@ export class ContractEventListener {
       const payload = {
         deviceId,
         accurate,
-        newAccuracyScore: accScore,
+        newAccuracyScore: Number(accScore), // serializing from BigInt to Number
         timestamp: Date.now(),
         txHash: event.log.transactionHash,
       };
@@ -41,7 +41,7 @@ export class ContractEventListener {
       const payload = {
         deviceId,
         available,
-        newAvailabilityScore: avScore,
+        newAvailabilityScore: Number(avScore),
         timestamp: Date.now(),
         txHash: event.log.transactionHash,
       };
