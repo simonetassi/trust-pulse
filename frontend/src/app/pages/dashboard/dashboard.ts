@@ -1,4 +1,4 @@
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, effect, inject, OnDestroy, OnInit } from '@angular/core';
 import { Device } from '../../../common/interfaces';
 import { ReputationCard } from "./components/reputation-card/reputation-card";
 import { BackendService } from '../../../common/services/backend.service';
@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { SocketService } from '../../../common/services/socket.service';
 import { RouterLink } from '@angular/router';
+import { WalletService } from '../../../common/services/wallet.service';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -16,6 +17,7 @@ import { RouterLink } from '@angular/router';
 export class Dashboard implements OnInit, OnDestroy {
   public readonly backend = inject(BackendService);
   public readonly socket = inject(SocketService);
+  public readonly wallet = inject(WalletService);
   private subscription = new Subscription();
 
   public devices: Device[] = [];
@@ -23,8 +25,15 @@ export class Dashboard implements OnInit, OnDestroy {
   public error: string | null = null;
   public isSocketConnected: boolean = false;
 
+  public constructor() {
+    effect(() => {
+      const currentAddress = this.wallet.address(); 
+      
+      this.loadDevices();
+    });
+  }
+
   public ngOnInit(): void {
-    this.loadDevices();
     this.listenSocketEvents();
     
     const connSub = this.socket.connected$.subscribe(connected => {
@@ -41,7 +50,9 @@ export class Dashboard implements OnInit, OnDestroy {
     this.isLoading = true;
     this.error = null;
 
-    const sub = this.backend.getOperatorDevices(environment.operatorAddress)
+    const targetAddress = this.wallet.address() || environment.operatorAddress;
+
+    const sub = this.backend.getOperatorDevices(targetAddress)
     .subscribe({
       next: (res) => {
         this.devices = res.devices;
