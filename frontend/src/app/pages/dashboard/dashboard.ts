@@ -5,10 +5,11 @@ import { BackendService } from '../../../common/services/backend.service';
 import { Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { SocketService } from '../../../common/services/socket.service';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-dashboard-page',
-  imports: [ReputationCard],
+  imports: [ReputationCard, RouterLink],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
