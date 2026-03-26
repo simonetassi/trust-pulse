@@ -41,6 +41,18 @@
   .hash {
     @apply font-mono text-xs text-muted truncate;
   }
+
+  .input {
+    @apply w-full bg-black/20 border border-surface-border rounded-lg px-4 py-2.5 text-sm text-white placeholder-muted focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all;
+  }
+
+  .btn-primary {
+    @apply cursor-pointer inline-flex items-center justify-center px-4 py-2.5 bg-white text-black font-semibold text-sm rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all;
+  }
+
+  .btn-ghost {
+    @apply cursor-pointer inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-muted hover:text-white hover:bg-surface-border/50 rounded-lg transition-colors;
+  }
 }
 
 * {
