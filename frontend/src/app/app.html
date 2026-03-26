@@ -6,28 +6,35 @@
         <span class="text-sm font-semibold tracking-wide">TrustPulse</span>
       </div>
       <div class="flex items-center gap-6">
-        <a
-          routerLink="/dashboard"
-          routerLinkActive="text-white"
-          class="text-sm text-muted hover:text-white transition-colors duration-200"
-        >
+        <a routerLink="/dashboard" routerLinkActive="text-white"
+           class="text-sm text-muted hover:text-white transition-colors duration-200">
           Network
         </a>
-        <a
-          routerLink="/operator"
-          routerLinkActive="text-white"
-          class="text-sm text-muted hover:text-white transition-colors duration-200"
-        >
+        <a routerLink="/operator" routerLinkActive="text-white"
+           class="text-sm text-muted hover:text-white transition-colors duration-200">
           Operator
         </a>
       </div>
-      <div class="flex items-center gap-2">
-        <div class="status-dot bg-muted"></div>
-        <span class="text-xs text-muted">Not connected</span>
-      </div>
+      @if (wallet.state() === 'connected') {
+        <div class="flex items-center gap-2">
+          <div class="status-dot bg-success"></div>
+          <span class="text-xs text-white font-mono">
+            {{ wallet.address() | slice:0:6 }}...{{ wallet.address() | slice:-4 }}
+          </span>
+        </div>
+      } @else if (wallet.state() === 'wrong-network') {
+        <div class="flex items-center gap-2">
+          <div class="status-dot bg-warning"></div>
+          <span class="text-xs text-warning">Wrong network</span>
+        </div>
+      } @else {
+        <div class="flex items-center gap-2">
+          <div class="status-dot bg-muted"></div>
+          <span class="text-xs text-muted">Not connected</span>
+        </div>
+      }
     </div>
   </nav>
-
   <main class="max-w-6xl mx-auto px-6 py-8">
     <router-outlet />
   </main>
