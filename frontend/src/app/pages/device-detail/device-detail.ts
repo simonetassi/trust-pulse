@@ -5,6 +5,8 @@ import { Subscription, switchMap } from 'rxjs';
 import { BackendService } from '../../../common/services/backend.service';
 import { SocketService } from '../../../common/services/socket.service';
 import { Device, ScoreHistoryEntry } from '../../../common/interfaces';
+import { ContractService } from '../../../common/services/contract.service';
+import { WalletService } from '../../../common/services/wallet.service';
 
 @Component({
   selector: 'app-device-detail',
@@ -17,6 +19,9 @@ export class DeviceDetailComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly backend = inject(BackendService);
   private readonly socket = inject(SocketService);
+  public readonly wallet = inject(WalletService);
+  private readonly contractService = inject(ContractService);
+
   private readonly subscription = new Subscription();
 
   public device: Device | null = null;
@@ -24,6 +29,10 @@ export class DeviceDetailComponent implements OnInit, OnDestroy {
   public isLoading = true;
   public isHistoryLoading = true;
   public error: string | null = null;
+
+  public deactivateState: 'idle' | 'loading' | 'error' = 'idle';
+  public deactivateError: string | null = null;
+
 
   public ngOnInit(): void {
     const routeSub = this.route.paramMap.pipe(
@@ -141,5 +150,27 @@ export class DeviceDetailComponent implements OnInit, OnDestroy {
     if (score >= 70) return 'bg-success';
     if (score >= 40) return 'bg-warning';
     return 'bg-danger';
+  }
+
+  public get isOwner(): boolean {
+    const address = this.wallet.address();
+    if (!address || !this.device) return false;
+  
+    return address.toLowerCase() === this.device.operator.toLowerCase();
+  }
+  
+  public async deactivate(): Promise<void> {
+    if (!this.device) return;
+    this.deactivateState = 'loading';
+    this.deactivateError = null;
+  
+    try {
+      await this.contractService.deactivateDevice(this.device.deviceId);
+      this.device = { ...this.device, active: false };
+      this.deactivateState = 'idle';
+    } catch (error: any) {
+      this.deactivateState = 'error';
+      this.deactivateError = error?.reason ?? 'Transaction failed.';
+    }
   }
 }

@@ -1,0 +1,91 @@
+<div class="flex flex-col gap-8 max-w-3xl mx-auto">
+  <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-1">
+      <h1 class="text-xl font-semibold">Operator</h1>
+      <p class="text-sm text-muted">
+        @if (!isRegistered) { Account registration required }
+        @else { Connected as {{ registeredName }} }
+      </p>
+    </div>
+    <div class="card flex items-center gap-6 py-3 px-5">
+      <div class="flex flex-col items-center gap-0.5">
+        <span class="label">Status</span>
+        <div class="flex items-center gap-2">
+          <div class="status-dot" [class]="wallet.state() === 'connected' ? 'bg-success' : 'bg-muted'"></div>
+          <span class="text-sm font-semibold text-white">
+            {{ wallet.state() === 'connected' ? 'Active' : 'Offline' }}
+          </span>
+        </div>
+      </div>
+      <div class="w-px h-6 bg-surface-border"></div>
+      <div class="flex flex-col items-center gap-0.5">
+        <span class="label">Network</span>
+        <span class="text-sm font-semibold" [class]="wallet.state() === 'wrong-network' ? 'text-danger' : 'text-white'">
+          {{ wallet.state() === 'wrong-network' ? 'Wrong' : 'Hardhat' }}
+        </span>
+      </div>
+    </div>
+  </div>
+  <div class="flex flex-col gap-4">
+    @if (wallet.state() !== 'connected') {
+      <div class="card flex flex-col items-center justify-center py-12 gap-4 border-dashed">
+        <p class="text-sm text-muted text-center max-w-xs">
+          {{ wallet.state() === 'wrong-network' 
+             ? 'Please switch MetaMask to Chain ID ' + environment.hardhatChainId 
+             : 'Connect your wallet to manage devices on-chain.' }}
+        </p>
+        <button class="btn-primary" (click)="connectWallet()">
+          {{ wallet.state() === 'wrong-network' ? 'Switch Network' : 'Connect MetaMask' }}
+        </button>
+        
+        @if (walletError) {
+          <span class="text-xs text-danger text-center">{{ walletError }}</span>
+        }
+      </div>
+    }
+    @if (wallet.state() === 'connected' && !isRegistered) {
+      <div class="card flex flex-col gap-4 animate-in fade-in duration-500">
+        <span class="label">Identity</span>
+        <div class="flex gap-3">
+          <input class="input flex-1" type="text" placeholder="Operator Name" [(ngModel)]="operatorName" />
+          <button class="btn-primary" [disabled]="!operatorName || registerState === 'loading'" (click)="registerOperator()">
+            {{ registerState === 'loading' ? 'Registering...' : 'Register' }}
+          </button>
+        </div>
+        
+        @if (registerState === 'error') {
+          <span class="text-xs text-danger">{{ registerError }}</span>
+        }
+      </div>
+    }
+    @if (wallet.state() === 'connected' && isRegistered) {
+      <div class="card flex flex-col gap-6 animate-in slide-in-from-bottom-2 duration-500">
+        <div class="flex flex-col gap-4">
+          <span class="label">Enroll Device</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <input class="input" type="text" placeholder="Endpoint URL" [(ngModel)]="deviceEndpoint" />
+            <input class="input" type="text" placeholder="Device Type" [(ngModel)]="deviceType" />
+          </div>
+          <button class="btn-primary w-full" 
+                  [disabled]="!deviceEndpoint || !deviceType || enrollState === 'loading'"
+                  (click)="enrollDevice()">
+            {{ enrollState === 'loading' ? 'Confirming...' : 'Enroll New Device' }}
+          </button>
+
+          @if (enrollState === 'error') {
+            <span class="text-xs text-danger text-center">{{ enrollError }}</span>
+          }
+        </div>
+        @if (enrollState === 'success') {
+          <div class="flex items-center justify-between p-3 bg-success/5 border border-success/20 rounded-lg">
+            <span class="text-xs text-success font-medium">Device successfully enrolled</span>
+            <span class="hash max-w-[200px]">{{ enrolledDeviceId }}</span>
+          </div>
+        }
+      </div>
+      <button class="btn-ghost self-center text-xs opacity-40 hover:opacity-100" (click)="wallet.disconnect()">
+        Disconnect Wallet
+      </button>
+    }
+  </div>
+</div>

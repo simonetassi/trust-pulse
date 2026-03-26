@@ -18,7 +18,7 @@
     </div>
   }
 
-  @if (device && !isLoading) {
+  @if (device && !isLoading) {  
     <div class="flex items-start justify-between">
       <div class="flex flex-col gap-1">
         <div class="flex items-center gap-3">
@@ -38,6 +38,36 @@
         {{ device.totalReports }} reports
       </span>
     </div>
+    @if (isOwner && device.active) {
+      <div class="card border-danger/20 flex items-center justify-between">
+        <div class="flex flex-col gap-1">
+          <span class="label">deactivate device</span>
+          <p class="text-sm text-muted">
+            Permanently freezes this device's reputation score on-chain.
+            This action cannot be undone.
+          </p>
+        </div>
+        <button
+          class="btn-ghost border-danger/30 text-danger hover:border-danger
+                 hover:text-danger flex-shrink-0 ml-6"
+          [disabled]="deactivateState === 'loading'"
+          (click)="deactivate()">
+          @if (deactivateState === 'loading') {
+            <span class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full border border-danger/30
+                           border-t-danger animate-spin"></span>
+              Confirming...
+            </span>
+          } @else {
+            Deactivate
+          }
+        </button>
+      </div>
+  
+      @if (deactivateError) {
+        <span class="text-xs text-danger">{{ deactivateError }}</span>
+      }
+    }
     <div class="card grid grid-cols-2 sm:grid-cols-3 gap-6">
       <div class="flex flex-col gap-1">
         <span class="label">type</span>
