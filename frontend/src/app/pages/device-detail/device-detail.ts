@@ -155,8 +155,6 @@ export class DeviceDetailComponent implements OnInit, OnDestroy {
   public get isOwner(): boolean {
     const address = this.wallet.address();
     if (!address || !this.device) return false;
-    console.log('address', address.toLowerCase())
-    console.log('operator', this.device.operator.toLowerCase())
   
     return address.toLowerCase() === this.device.operator.toLowerCase();
   }
