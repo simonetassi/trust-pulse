@@ -96,5 +96,9 @@ export class ContractService {
   public static computeDeviceId(wotEndpoint: string): string {
     return ethers.keccak256(ethers.toUtf8Bytes(wotEndpoint));
   }
+
+  public getContractInstance(): ethers.Contract {
+    return this.contract;
+  }
 }
 

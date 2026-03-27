@@ -9,6 +9,7 @@ export class DeviceMonitor {
   private thing: any = null;
   private heartbeatTimeout: NodeJS.Timeout | null = null;
   private isRunning: boolean = false;
+  private isActive: boolean = true;
 
   private readonly HEARTBEAT_MULTIPLIER = 1.5;
 
@@ -36,6 +37,11 @@ export class DeviceMonitor {
 
     await this.thing.subscribeEvent('heartbeat', async (data: any) => {
       if(!this.isRunning) return;
+
+      if (!this.isActive) {
+        console.log(`[DeviceMonitor ${this.wotEndpoint}] Skipping — device is inactive`);
+        return;
+      }
 
       console.log(`[DeviceMonitor] ${this.wotEndpoint} Heartbeat recevied`)
 
@@ -69,13 +75,27 @@ export class DeviceMonitor {
     console.log(`[DeviceMonitor ${this.wotEndpoint}] Stopped`);
   }
 
+  public markInactive(): void {
+    console.log(`[DeviceMonitor ${this.wotEndpoint}] Marked as inactive`);
+    this.isActive = false;
+
+    if (this.heartbeatTimeout) {
+      clearTimeout(this.heartbeatTimeout);
+      this.heartbeatTimeout = null;
+    }
+  }
+
+  public getDeviceId(): string {
+    return this.deviceId;
+  }
+
   private resetHeartbeatTimeout(): void {
     if (this.heartbeatTimeout) {
       clearTimeout(this.heartbeatTimeout);
     }
 
     this.heartbeatTimeout = setTimeout(async () => {
-      if(!this.isRunning) return;
+      if(!this.isRunning || !this.isActive) return;
 
       console.warn(`[DeviceMonitor ${this.wotEndpoint}] Heartbeat timeout -- device offline`);
 
