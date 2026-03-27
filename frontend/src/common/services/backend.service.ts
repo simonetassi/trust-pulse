@@ -25,4 +25,8 @@ export class BackendService {
   public getOperatorDevices(address: string): Observable<OperatorDevices> {
     return this.http.get<OperatorDevices>(`${this.base}/api/operators/${address}/devices`);
   }
+
+  public getAllDevices(): Observable<{ devices: Device[] }> {
+    return this.http.get<{ devices: Device[] }>(`${this.base}/api/devices`);
+  }
 }

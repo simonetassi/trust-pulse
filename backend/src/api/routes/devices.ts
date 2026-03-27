@@ -91,3 +91,33 @@ devicesRouter.get('/:deviceId/history', async (req: Request, res: Response) => {
     res.status(500).json({ error: error.message });
   }
 })
+
+// GET ALL DEVICES
+devicesRouter.get('/', async (req: Request, res: Response) => {
+  try {
+    const contract = getContract();
+    
+    const deviceIds: string[] = await contract.getAllDevices();
+    
+    const devices = await Promise.all(deviceIds.map(async (deviceId) => {
+      const device = await contract.devices(deviceId);
+      const [accuracy, availability, composite] = await contract.getReputation(deviceId);
+
+      return {
+        deviceId,
+        operator: device.operator,
+        wotEndpoint: device.wotEndpoint,
+        deviceType: device.deviceType,
+        accuracyScore: Number(accuracy),
+        availabilityScore: Number(availability),
+        compositeScore: Number(composite),
+        totalReports: Number(device.totalReports),
+        active: device.active,
+      };
+    }));
+
+    res.json({ devices });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});

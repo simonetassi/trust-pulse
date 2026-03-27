@@ -39,6 +39,8 @@ contract ChainReputation {
   mapping(bytes32 => Device) public devices;
   
   mapping(address => bytes32[]) public operatorDevices;
+  
+  bytes32[] public allDeviceIds;
 
   constructor(address _oracle) {
       oracle = _oracle;
@@ -98,6 +100,7 @@ contract ChainReputation {
     });
 
     operatorDevices[msg.sender].push(deviceId);
+    allDeviceIds.push(deviceId);
 
     emit DeviceEnrolled(deviceId, msg.sender, wotEndpoint);
   }
@@ -166,6 +169,14 @@ contract ChainReputation {
     returns(bytes32[] memory) 
   {
     return operatorDevices[operator];
+  }
+
+  function getAllDevices() 
+    external
+    view 
+    returns (bytes32[] memory) 
+  {
+    return allDeviceIds;
   }
 
   function _min(uint256 a, uint256 b) internal pure returns (uint256) {

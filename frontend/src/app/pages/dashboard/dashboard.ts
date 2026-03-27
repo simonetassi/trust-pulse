@@ -23,6 +23,7 @@ export class Dashboard implements OnInit, OnDestroy {
   public devices: Device[] = [];
   public isLoading: boolean = false;
   public error: string | null = null;
+  public viewMode: 'all' | 'mine' = 'all';
   public isSocketConnected: boolean = false;
 
   public constructor() {
@@ -46,14 +47,22 @@ export class Dashboard implements OnInit, OnDestroy {
     this.subscription.unsubscribe();
   }
 
+  public toggleViewMode(mode: 'all' | 'mine'): void {
+    this.viewMode = mode;
+    this.loadDevices();
+  }
+
   private loadDevices(): void {
     this.isLoading = true;
     this.error = null;
-
+  
     const targetAddress = this.wallet.address() || environment.operatorAddress;
-
-    const sub = this.backend.getOperatorDevices(targetAddress)
-    .subscribe({
+  
+    const fetchObservable = this.viewMode === 'all' 
+      ? this.backend.getAllDevices() 
+      : this.backend.getOperatorDevices(targetAddress);
+  
+    const sub = fetchObservable.subscribe({
       next: (res) => {
         this.devices = res.devices;
         this.sortDevices();
@@ -62,10 +71,9 @@ export class Dashboard implements OnInit, OnDestroy {
       error: (err) => {
         this.error = 'Could not load devices. Make sure the backend is running.';
         this.isLoading = false;
-        console.error(`[Dashboard] Failed to load devices`, err);
       }
     });
-
+  
     this.subscription.add(sub);
   }
 
