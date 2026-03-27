@@ -14,12 +14,15 @@ export class OracleManager {
     console.log(`Starting monitors for ${deviceConfigs.length} devices`);
 
     for (const config of deviceConfigs) {
-      const endpoint = `http://localhost:${config.port}/${config.id}`
+      const endpoint = `http://localhost:${config.port}/${config.id}`;
+      const deviceId = ContractService.computeDeviceId(endpoint);
 
       const monitor = new DeviceMonitor(endpoint, this.contractService, config);
       await monitor.start()
-      this.monitors.set(config.id, monitor);
+      this.monitors.set(deviceId, monitor);
     }
+
+    this.listenForDeactivations();
     console.log(`All monitors running`);
   }
 
@@ -28,5 +31,17 @@ export class OracleManager {
     Array.from(this.monitors.values()).forEach((monitor) => monitor.stop());
 
     this.monitors.clear();
+  }
+
+  private listenForDeactivations(): void {
+    const contract = this.contractService.getContractInstance();
+    
+    contract.on("DeviceDeactivated", (deviceId: string) => {
+      const monitor = this.monitors.get(deviceId);
+      if (monitor) {
+        monitor.markInactive();
+        console.log(`Monitor marked inactive for ${deviceId}.`);
+      }
+    });
   }
 }
