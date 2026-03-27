@@ -2,9 +2,14 @@
   <div class="flex items-center justify-between">
     <div class="flex flex-col gap-1">
       <h1 class="text-xl font-semibold">Network</h1>
-      <p class="text-sm text-muted">
-        {{ devices.length }} device{{ devices.length !== 1 ? 's' : '' }} enrolled
-      </p>
+      <div class="flex items-center gap-2">
+        <div class="status-dot"
+             [class]="isSocketConnected ? 'bg-success' : 'bg-muted'">
+        </div>
+        <span class="text-xs text-muted">
+          {{ isSocketConnected ? 'Live updates active' : 'Connecting...' }}
+        </span>
+      </div>
     </div>
     <div class="card flex items-center gap-6 py-3 px-5">
       <div class="flex flex-col items-center gap-0.5">
@@ -29,19 +34,25 @@
       </div>
     </div>
   </div>
-  <div class="flex items-center gap-2">
-    <div class="status-dot"
-         [class]="isSocketConnected ? 'bg-success' : 'bg-muted'">
-    </div>
-    <span class="text-xs text-muted">
-      {{ isSocketConnected ? 'Live updates active' : 'Connecting...' }}
-    </span>
-  </div>
   @if (error) {
     <div class="card border-danger/30 text-sm text-danger">
       {{ error }}
     </div>
   }
+  <div class="flex items-center gap-2 mb-4 bg-surface-secondary w-fit p-1 rounded-lg border border-surface-border">
+    <button 
+      class="px-4 py-1.5 text-sm rounded-md transition-colors"
+      [class]="viewMode === 'all' ? 'bg-surface-border text-white' : 'text-muted hover:text-white'"
+      (click)="toggleViewMode('all')">
+      All Network Devices
+    </button>
+    <button 
+      class="px-4 py-1.5 text-sm rounded-md transition-colors"
+      [class]="viewMode === 'mine' ? 'bg-surface-border text-white' : 'text-muted hover:text-white'"
+      (click)="toggleViewMode('mine')">
+      My Devices
+    </button>
+  </div>
   @if (isLoading) {
     <div class="flex items-center justify-center py-24">
       <div class="w-6 h-6 rounded-full border-2 border-surface-border border-t-accent animate-spin"></div>
