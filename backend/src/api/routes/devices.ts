@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { getContract } from "../contractProvider";
+import { getContract } from "../../shared/contractProvider";
 
 export const devicesRouter = Router();
 
