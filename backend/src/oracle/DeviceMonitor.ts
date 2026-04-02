@@ -10,6 +10,7 @@ export class DeviceMonitor {
   private heartbeatTimeout: NodeJS.Timeout | null = null;
   private isRunning: boolean = false;
   private isActive: boolean = true;
+  private lastSeenEventId: number = 0;
 
   private readonly HEARTBEAT_MULTIPLIER = 1.5;
 
@@ -43,13 +44,25 @@ export class DeviceMonitor {
         return;
       }
 
+      let payload: any;
+      try {
+        payload = await data.value();
+      } catch (error) {
+        console.error(`[DeviceMonitor] Failed to parse heartbeat data:`, error);
+        return; 
+      }
+
+      const eventId = payload?.eventId ?? Math.floor(Date.now() / 1000);
+      this.lastSeenEventId = eventId;
+
       console.log(`[DeviceMonitor] ${this.wotEndpoint} Heartbeat recevied`)
+      console.log('eventId:', eventId);
 
       this.resetHeartbeatTimeout();
 
-      await this.contractService.submitAvailabilityReport(this.deviceId, true);
+      await this.contractService.submitAvailabilityReport(this.deviceId, true, eventId);
 
-      await this.evaluateAccuracy();
+      await this.evaluateAccuracy(eventId);
     })
   }
 
@@ -97,15 +110,18 @@ export class DeviceMonitor {
     this.heartbeatTimeout = setTimeout(async () => {
       if(!this.isRunning || !this.isActive) return;
 
-      console.warn(`[DeviceMonitor ${this.wotEndpoint}] Heartbeat timeout -- device offline`);
+      const missingEventId = this.lastSeenEventId + 1;
+      this.lastSeenEventId = missingEventId;
 
-      await this.contractService.submitAvailabilityReport(this.deviceId, false);
+      console.warn(`[DeviceMonitor] Heartbeat timeout. Penalizing EventID: ${missingEventId}`);
+
+      await this.contractService.submitAvailabilityReport(this.deviceId, false, missingEventId);
 
       this.resetHeartbeatTimeout();
     }, this.HEARTBEAT_MULTIPLIER * this.deviceConfig.heartbeatInterval); 
   }
 
-  private async evaluateAccuracy(): Promise<void> {
+  private async evaluateAccuracy(eventId: number): Promise<void> {
     try {
       const temperatureRaw = await this.thing.readProperty('temperature');
       const humidityRaw = await this.thing.readProperty('humidity');
@@ -129,7 +145,7 @@ export class DeviceMonitor {
          )
       }
 
-      this.contractService.submitAccuracyReport(this.deviceId, accurate);
+      this.contractService.submitAccuracyReport(this.deviceId, accurate, eventId);
     } catch (error) {
       console.error(`[DeviceMonitor ${this.wotEndpoint}] Failed to read device properties: `, error);
     }

@@ -11,6 +11,7 @@ export class DeviceSimulator {
 
   private currentTemperature = 20;
   private currentHumidity = 50;
+  private sequenceNonce = 0;
 
   public constructor(config: DeviceConfig){
     this.config = config;
@@ -56,7 +57,8 @@ export class DeviceSimulator {
             type: "object",
             properties: {
               timestamp: { type: "number" },
-              deviceId: { type: "string" }
+              deviceId: { type: "string" },
+              eventId: { type:  "number" }
             }
           }
         }
@@ -127,9 +129,12 @@ export class DeviceSimulator {
   private startHeartbeat(): void {
     this.heartbeatTimer = setInterval(() => {
       if (this.thing && this.isRunning) {
+        this.sequenceNonce++;
+
         this.thing.emitEvent("heartbeat", {
           timestamp: Date.now(),
-          deviceId: this.config.id
+          deviceId: this.config.id,
+          eventId: this.sequenceNonce
         });
       }
     }, this.config.heartbeatInterval);

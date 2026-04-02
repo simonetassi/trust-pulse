@@ -3,8 +3,8 @@ import * as fs from "fs";
 import * as path from "path";
 
 const artifactPath = path.join(
-  __dirname,
-  "../../../blockchain/artifacts/contracts/ChainReputation.sol/ChainReputation.json"
+  process.cwd(),
+  "../blockchain/artifacts/contracts/ChainReputation.sol/ChainReputation.json"
 );
 const deploymentsPath = path.join(__dirname, "../../../deployments.json");
 

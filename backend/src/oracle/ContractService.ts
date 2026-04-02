@@ -62,9 +62,9 @@ export class ContractService {
     return next;
   }
 
-  public async submitAccuracyReport(deviceId: string, accurate: boolean): Promise<void> {
+  public async submitAccuracyReport(deviceId: string, accurate: boolean, eventId: number): Promise<void> {
     this.enqueue('submitAccuracyReport', deviceId, async () => {
-      const tx = await this.contract.submitAccuracyReport(deviceId, accurate);
+      const tx = await this.contract.submitAccuracyReport(deviceId, accurate, eventId, { gasLimit: 500000 });
       await tx.wait();
 
       console.log(`Accuracy report submitted ` +
@@ -73,9 +73,9 @@ export class ContractService {
     })
   }
 
-  public async submitAvailabilityReport(deviceId: string, available: boolean): Promise<void> {
+  public async submitAvailabilityReport(deviceId: string, available: boolean, eventId: number): Promise<void> {
     this.enqueue('submitAvailabilityReport', deviceId, async () => {
-      const tx = await this.contract.submitAvailabilityReport(deviceId, available);
+      const tx = await this.contract.submitAvailabilityReport(deviceId, available, eventId, { gasLimit: 500000 });
       await tx.wait();
 
       console.log(`Availability report submitted ` +

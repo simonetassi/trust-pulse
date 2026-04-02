@@ -7,50 +7,66 @@ async function main() {
 
   const [deployer] = await ethers.getSigners();
 
-  let oracleAddress: string;
+  let oracleAddresses: string[] = [];
 
   if (network.name === "localhost" || network.name === "hardhat") {
     const accounts = await ethers.getSigners();
-    oracleAddress = accounts[1].address; // use the second account leaving index 0 as the general deployer
-    console.log(`Oracle address (local account #1): ${oracleAddress}`);
+    oracleAddresses = [
+      accounts[1].address,
+      accounts[2].address,
+      accounts[18].address
+    ];
+    console.log(`Oracles mapped to local accounts #1, #2, #3:`);
+    oracleAddresses.forEach((addr, i) => console.log(`  Oracle ${i + 1}: ${addr}`));
   } else {
-    const oracleFromEnv = process.env.ORACLE_ADDRESS;
-    if (!oracleFromEnv) {
-      throw new Error("ORACLE_ADDRESS is not set in .env for non-local deployment");
+    const oracle1 = process.env.ORACLE_1_ADDRESS;
+    const oracle2 = process.env.ORACLE_2_ADDRESS;
+    const oracle3 = process.env.ORACLE_3_ADDRESS;
+    
+    if (!oracle1 || !oracle2 || !oracle3) {
+      throw new Error("ORACLE_1_ADDRESS, ORACLE_2_ADDRESS, and ORACLE_3_ADDRESS must be set in .env for non-local deployment");
     }
-    oracleAddress = oracleFromEnv;
-    console.log(`Oracle address (from .env): ${oracleAddress}`);
+    oracleAddresses = [oracle1, oracle2, oracle3];
+    console.log(`Oracles mapped from .env variables:`);
+    oracleAddresses.forEach((addr, i) => console.log(`  Oracle ${i + 1}: ${addr}`));
   }
 
-  console.log(`Deployer address:           ${deployer.address}`);
+  console.log(`\nDeployer (Admin) address:   ${deployer.address}`);
   console.log(`Deployer balance:           ${ethers.formatEther(
     await ethers.provider.getBalance(deployer.address)
   )} ETH`);
 
-  // DEPLOY
   console.log("\nDeploying ChainReputation...");
-
   const Factory = await ethers.getContractFactory("ChainReputation");
-  const contract = await Factory.deploy(oracleAddress);
+  const contract = await Factory.deploy();
 
   await contract.waitForDeployment();
-
   const contractAddress = await contract.getAddress();
-
   console.log(`ChainReputation deployed to: ${contractAddress}`);
 
-  // SAVE ADDRESS
-  saveAddress(network.name, "ChainReputation", contractAddress);
-  console.log(`Address saved to deployments.json`);
+  console.log("\nConfiguring Decentralized Oracle Network...");
+  
+  for (let i = 0; i < oracleAddresses.length; i++) {
+    console.log(`  Authorizing Oracle ${i + 1}: ${oracleAddresses[i]}`);
+    const tx = await contract.connect(deployer).addOracle(oracleAddresses[i]);
+    await tx.wait();
+  }
 
-  // CONSTANTS
-  console.log("\nContract constants:");
+  console.log(`  Setting Quorum to 2...`);
+  const quorumTx = await contract.connect(deployer).setQuorum(2);
+  await quorumTx.wait();
+
+  saveAddress(network.name, "ChainReputation", contractAddress);
+  console.log(`\nAddress saved to deployments.json`);
+
+  console.log("\nContract state & constants:");
+  console.log(`  Admin:                ${await contract.admin()}`);
+  console.log(`  Active Quorum:        ${await contract.quorum()}`);
+  console.log(`  Total Oracles:        ${await contract.oracleCount()}`);
   console.log(`  ACCURACY_REWARD:      ${await contract.ACCURACY_REWARD()}`);
   console.log(`  ACCURACY_PENALTY:     ${await contract.ACCURACY_PENALTY()}`);
   console.log(`  AVAILABILITY_REWARD:  ${await contract.AVAILABILITY_REWARD()}`);
   console.log(`  AVAILABILITY_PENALTY: ${await contract.AVAILABILITY_PENALTY()}`);
-
-  console.log("\nDeployment complete.");
 }
 
 main()

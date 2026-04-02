@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 import { Request, Response, Router } from "express";
-import { getContract } from "../contractProvider";
+import { getContract } from "../../shared/contractProvider";
 
 export const operatorsRouter = Router();
 
