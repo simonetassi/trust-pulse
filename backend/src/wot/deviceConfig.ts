@@ -1,50 +1,44 @@
-export interface DeviceConfig {
-  id: string;
-  port: number;
-  deviceType: string;
-  faultRate: number;
-  heartbeatInterval: number;
-  temperature: {
-    min: number;
-    max: number;
-  };
-  humidity: {
-    min: number;
-    max: number;
-  };
+export interface PropertyProfile {
+  type: 'number' | 'boolean' | 'string';
+  minimum?: number;
+  maximum?: number;
 }
 
-export const deviceConfigs: DeviceConfig[] = [
+export interface SimulatorProfile {
+  id: string;
+  port: number;
+  title: string;
+  heartbeatInterval: number;
+  properties: Record<string, PropertyProfile>;
+}
+
+export const simulationProfiles: SimulatorProfile[] = [
   {
     id: "sensor-01",
     port: 8081,
-    deviceType: "temperature-humidity-sensor",
-    faultRate: 0.05,
-    heartbeatInterval: 30000,
-    temperature: { min: 18, max: 26 },
-    humidity: { min: 40, max: 70 }
+    title: "Agricultural Weather Station",
+    heartbeatInterval: 10000,
+    properties: {
+      temperature: { type: 'number', minimum: -10, maximum: 50 },
+      humidity: { type: 'number', minimum: 0, maximum: 100 }
+    }
   },
   {
     id: "sensor-02",
     port: 8082,
-    deviceType: "temperature-humidity-sensor",
-    faultRate: 0.25,
-    heartbeatInterval: 30000,
-    temperature: { min: 18, max: 26 },
-    humidity: { min: 40, max: 70 }
+    title: "Industrial Pressure Valve",
+    heartbeatInterval: 8000,
+    properties: {
+      pressurePSI: { type: 'number', minimum: 200, maximum: 800 }
+    }
   },
   {
     id: "sensor-03",
     port: 8083,
-    deviceType: "temperature-humidity-sensor",
-    faultRate: 0.6,
-    heartbeatInterval: 30000,
-    temperature: { min: 18, max: 26 },
-    humidity: { min: 40, max: 70 }
+    title: "Smart Door Lock",
+    heartbeatInterval: 15000,
+    properties: {
+      isLocked: { type: 'boolean' }
+    }
   }
 ];
-
-export const PLAUSIBILITY_BOUNDS = {
-  temperature: { min: -10, max: 60 },
-  humidity: { min: 0, max: 100 }
-};
