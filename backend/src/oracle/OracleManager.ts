@@ -1,4 +1,3 @@
-import { deviceConfigs } from "../wot/deviceConfig";
 import { ContractService } from "./ContractService";
 import { DeviceMonitor } from "./DeviceMonitor";
 
@@ -11,36 +10,52 @@ export class OracleManager {
   }
 
   public async startAll(): Promise<void> {
-    console.log(`Starting monitors for ${deviceConfigs.length} devices`);
+    console.log(`[OracleManager] Syncing devices from the blockchain...`);
 
-    for (const config of deviceConfigs) {
-      const endpoint = `http://localhost:${config.port}/${config.id}`;
-      const deviceId = ContractService.computeDeviceId(endpoint);
+    const contract = this.contractService.getContractInstance();
+    const allDeviceIds = await contract.getAllDevices();
 
-      const monitor = new DeviceMonitor(endpoint, this.contractService, config);
-      await monitor.start()
-      this.monitors.set(deviceId, monitor);
+    for (const deviceId of allDeviceIds) {
+      const deviceData = await contract.devices(deviceId);
+      
+      if (deviceData.active) {
+        const wotEndpoint = deviceData.wotEndpoint;
+        
+        const monitor = new DeviceMonitor(wotEndpoint, this.contractService);
+        await monitor.start();
+        
+        this.monitors.set(deviceId, monitor);
+      }
     }
 
+    this.listenForNewDevices();
     this.listenForDeactivations();
-    console.log(`All monitors running`);
+    console.log(`[OracleManager] Sync complete. All active monitors running.`);
   }
 
-  public async stopAll(): Promise<void> {
-    console.log(`Stopping all monitors (${deviceConfigs.length} devices)`);
-    Array.from(this.monitors.values()).forEach((monitor) => monitor.stop());
+  private listenForNewDevices(): void {
+    const contract = this.contractService.getContractInstance();
+    
+    contract.on("DeviceEnrolled", async (deviceId: string, operator: string, wotEndpoint: string) => {
+      if (this.monitors.has(deviceId)) return; 
 
-    this.monitors.clear();
+      console.log(`[OracleManager] New device detected on-chain! Starting monitor for ${wotEndpoint}`);
+      
+      const monitor = new DeviceMonitor(wotEndpoint, this.contractService);
+      await monitor.start();
+      this.monitors.set(deviceId, monitor);
+    });
   }
 
   private listenForDeactivations(): void {
     const contract = this.contractService.getContractInstance();
     
-    contract.on("DeviceDeactivated", (deviceId: string) => {
+    contract.on("DeviceDeactivated", async (deviceId: string) => {
       const monitor = this.monitors.get(deviceId);
       if (monitor) {
-        monitor.markInactive();
-        console.log(`Monitor marked inactive for ${deviceId}.`);
+        await monitor.stop();
+        this.monitors.delete(deviceId);
+        console.log(`[OracleManager] Cleaned up monitor for deactivated device: ${deviceId}`);
       }
     });
   }

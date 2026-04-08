@@ -1,17 +1,17 @@
-import { deviceConfigs } from "./deviceConfig";
+import { simulationProfiles } from "./deviceConfig";
 import { DeviceSimulator } from "./DeviceSimulator";
 
 export class DeviceManager {
   private devices: Map<string, DeviceSimulator> = new Map();
 
   public async startAll(): Promise<void> {
-    console.log(`\nStarting WoT device network (${deviceConfigs.length} devices)...`);
+    console.log(`\nStarting WoT device network (${simulationProfiles.length} generic devices)...`);
 
     await Promise.all(
-      deviceConfigs.map(async (config) => {
-        const device = new DeviceSimulator(config);
-        device.start();
-        this.devices.set(config.id, device);
+      simulationProfiles.map(async (profile) => {
+        const device = new DeviceSimulator(profile);
+        await device.start(); 
+        this.devices.set(profile.id, device);
       }));
 
     console.log(`\nWoT network online. Devices:`);
