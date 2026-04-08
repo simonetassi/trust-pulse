@@ -1,55 +1,65 @@
-import { DeviceConfig } from "./deviceConfig";
 import { Servient } from "@node-wot/core";
 import { HttpServer } from "@node-wot/binding-http";
+import { SimulatorProfile } from "./deviceConfig";
 
 export class DeviceSimulator {
-  private config: DeviceConfig;
+  private profile: SimulatorProfile;
   private servient: Servient;
-  private thing: any = null; // inconsistent node-wot ExposedThing type?
+  private thing: any = null; 
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private isRunning: boolean = false;
 
-  private currentTemperature = 20;
-  private currentHumidity = 50;
   private sequenceNonce = 0;
+  private faultRate: number;
 
-  public constructor(config: DeviceConfig){
-    this.config = config;
-
+  public constructor(profile: SimulatorProfile) {
+    this.profile = profile;
     this.servient = new Servient();
-    this.servient.addServer(new HttpServer({ port: config.port }));
+    this.servient.addServer(new HttpServer({ port: profile.port }));
+
+    const isFaultyDevice = Math.random() > 0.5;
+    if (isFaultyDevice) {
+      this.faultRate = parseFloat((Math.random() * 0.35 + 0.05).toFixed(2));
+    } else {
+      this.faultRate = 0.0;
+    }
   }
 
   public async start(): Promise<void> {
     const WoT = await this.servient.start();
 
-    const td: any = {
-      title: `${this.config.id}`,
-      id: `urn:trustpulse:${this.config.id}`,
-      description: `Simulated ${this.config.deviceType} for TrustPulse network`,
-      properties: {
-        temperature: {
-          type: "number",
-          description: "Current temperature reading in Celsius",
-          unit: "celsius",
-          readOnly: true,
-          observable: false
-        },
-        humidity: {
-          type: "number",
-          description: "Current relative humidity reading",
-          unit: "percent",
-          readOnly: true,
-          observable: false
-        },
-        status: {
-          type: "string",
-          description: "Device operational status",
-          readOnly: true,
-          observable: false,
-          enum: ["online", "faulty"]
-        }
+    const dynamicProperties: any = {
+      heartbeatInterval: {
+        type: "number",
+        description: "The interval in milliseconds at which this device emits heartbeats",
+        readOnly: true,
+        observable: false
       },
+      status: {
+        type: "string",
+        description: "Device operational status",
+        readOnly: true,
+        observable: false,
+        enum: ["online", "faulty", "offline"]
+      }
+    };
+
+    for (const [key, propConfig] of Object.entries(this.profile.properties)) {
+      dynamicProperties[key] = {
+        type: propConfig.type,
+        readOnly: true,
+        observable: false
+      };
+      
+      if (propConfig.minimum !== undefined) dynamicProperties[key].minimum = propConfig.minimum;
+      if (propConfig.maximum !== undefined) dynamicProperties[key].maximum = propConfig.maximum;
+    }
+
+    const td: any = {
+      title: this.profile.id,
+      id: `urn:trustpulse:${this.profile.id}`,
+      description: `Simulated WoT device for TrustPulse network`,
+      properties: dynamicProperties,
       events: {
         heartbeat: {
           description: "Periodic liveness signal emitted by the device",
@@ -58,7 +68,7 @@ export class DeviceSimulator {
             properties: {
               timestamp: { type: "number" },
               deviceId: { type: "string" },
-              eventId: { type:  "number" }
+              eventId: { type: "number" }
             }
           }
         }
@@ -67,27 +77,19 @@ export class DeviceSimulator {
 
     this.thing = await WoT.produce(td);
 
-    this.thing?.setPropertyReadHandler("temperature", async () => {
-      return this.generateReading(
-        this.config.temperature.min,
-        this.config.temperature.max,
-        -50,
-        999
-      );
-    });
-
-    this.thing?.setPropertyReadHandler("humidity", async () => {
-      return this.generateReading(
-        this.config.humidity.min,
-        this.config.humidity.max,
-        -50,
-        999
-      );
-    });
-
     this.thing?.setPropertyReadHandler("status", async () => {
       return this.isRunning ? "online" : "offline";
     });
+
+    this.thing?.setPropertyReadHandler("heartbeatInterval", async () => {
+      return this.profile.heartbeatInterval;
+    });
+
+    for (const [key, propConfig] of Object.entries(this.profile.properties)) {
+      this.thing?.setPropertyReadHandler(key, async () => {
+        return this.generateReading(propConfig);
+      });
+    }
 
     await this.thing?.expose();
     this.isRunning = true;
@@ -95,8 +97,8 @@ export class DeviceSimulator {
     this.startHeartbeat();
 
     console.log(
-      `[${this.config.id}] Started on port ${this.config.port} ` +
-      `(faultRate: ${this.config.faultRate})`
+      `[${this.profile.id}] Simulator '${this.profile.title}' started on port ${this.profile.port} ` +
+      `(faultRate: ${this.faultRate})`
     );
   }
 
@@ -109,21 +111,21 @@ export class DeviceSimulator {
     }
 
     await this.servient.shutdown();
-    console.log(`[${this.config.id}] Stopped`);
+    console.log(`[${this.profile.id}] Stopped`);
   } 
 
   public setFaultRate(rate: number): void {
     if (rate < 0 || rate > 1) throw new Error("Fault rate must be between 0 and 1");
-    this.config.faultRate = rate;
-    console.log(`[${this.config.id}] Fault rate updated to ${rate}`);
+    this.faultRate = rate;
+    console.log(`[${this.profile.id}] Fault rate updated to ${rate}`);
   }
 
-  public getConfig(): DeviceConfig {
-    return { ...this.config };
+  public getProfile(): SimulatorProfile {
+    return { ...this.profile };
   }
 
   public getEndpoint(): string {
-    return `http://localhost:${this.config.port}`;
+    return `http://localhost:${this.profile.port}`;
   }
 
   private startHeartbeat(): void {
@@ -133,24 +135,33 @@ export class DeviceSimulator {
 
         this.thing.emitEvent("heartbeat", {
           timestamp: Date.now(),
-          deviceId: this.config.id,
+          deviceId: this.profile.id,
           eventId: this.sequenceNonce
         });
       }
-    }, this.config.heartbeatInterval);
+    }, this.profile.heartbeatInterval);
   }
 
-  private generateReading(normalMin: number, normalMax: number, faultMin: number, faultMax: number): number {
-    const isFaulty = Math.random() < this.config.faultRate;
-
-    if (isFaulty) {
-      return this.randomInRange(faultMin, faultMax);
+  private generateReading(propConfig: any): any {
+    if (propConfig.type === 'boolean') {
+      return Math.random() > 0.5;
     }
 
-    return parseFloat(this.randomInRange(normalMin, normalMax).toFixed(2));
-  }
+    if (propConfig.type === 'number') {
+      const min = propConfig.minimum ?? 0;
+      const max = propConfig.maximum ?? 100;
+      const isFaulty = Math.random() < this.faultRate;
 
-  private randomInRange(min: number, max: number): number {
-    return Math.random() * (max - min) + min;
+      if (isFaulty) {
+        const anomalyOffset = (max - min) * 1.5;
+        const outOfBoundsValue = Math.random() > 0.5 ? max + anomalyOffset : min - anomalyOffset;
+        return parseFloat(outOfBoundsValue.toFixed(2));
+      }
+
+      const safeValue = Math.random() * (max - min) + min;
+      return parseFloat(safeValue.toFixed(2));
+    }
+
+    return "unknown";
   }
 }
