@@ -1,7 +1,6 @@
 import Servient from "@node-wot/core";
 import { ContractService } from "./ContractService";
 import { HttpClientFactory } from "@node-wot/binding-http";
-import { DeviceConfig, PLAUSIBILITY_BOUNDS } from "../wot/deviceConfig";
 
 export class DeviceMonitor {
   private deviceId: string;
@@ -12,12 +11,13 @@ export class DeviceMonitor {
   private isActive: boolean = true;
   private lastSeenEventId: number = 0;
 
+  private dynamicIntervalMs: number = 15000;
   private readonly HEARTBEAT_MULTIPLIER = 1.5;
 
   public constructor(
     private wotEndpoint: string, 
-    private contractService: ContractService,
-    private deviceConfig: DeviceConfig) {
+    private contractService: ContractService
+  ) {
       this.deviceId = ContractService.computeDeviceId(wotEndpoint);
       this.servient = new Servient();
       this.servient.addClientFactory(new HttpClientFactory);
@@ -31,6 +31,14 @@ export class DeviceMonitor {
 
     const td = await WoT.requestThingDescription(this.wotEndpoint);
     this.thing = await WoT.consume(td);
+
+    try {
+      const rawInterval = await this.thing.readProperty('heartbeatInterval');
+      this.dynamicIntervalMs = await rawInterval.value();
+      console.log(`[DeviceMonitor ${this.wotEndpoint}] Bound heartbeat interval to ${this.dynamicIntervalMs}ms`);
+    } catch (error) {
+      console.warn(`[DeviceMonitor ${this.wotEndpoint}] Failed to read heartbeatInterval. Falling back to 15s.`);
+    }
 
     console.log(`[DeviceMonitor ${this.wotEndpoint}] Connected. Starting Monitoring`);
 
@@ -107,6 +115,8 @@ export class DeviceMonitor {
       clearTimeout(this.heartbeatTimeout);
     }
 
+    const timeoutThreshold = this.dynamicIntervalMs * this.HEARTBEAT_MULTIPLIER;
+
     this.heartbeatTimeout = setTimeout(async () => {
       if(!this.isRunning || !this.isActive) return;
 
@@ -118,36 +128,59 @@ export class DeviceMonitor {
       await this.contractService.submitAvailabilityReport(this.deviceId, false, missingEventId);
 
       this.resetHeartbeatTimeout();
-    }, this.HEARTBEAT_MULTIPLIER * this.deviceConfig.heartbeatInterval); 
+    }, timeoutThreshold); 
   }
 
   private async evaluateAccuracy(eventId: number): Promise<void> {
     try {
-      const temperatureRaw = await this.thing.readProperty('temperature');
-      const humidityRaw = await this.thing.readProperty('humidity');
+      let accurate = true;
+      const td = await this.thing.getThingDescription();
 
-      const temperature = await temperatureRaw.value();
-      const humidity = await humidityRaw.value();
-
-      console.log(`[DeviceMonitor ${this.wotEndpoint}] temperature: ${temperature}, humidity: ${humidity}`);
-
-      const temperatureVaild = temperature >= PLAUSIBILITY_BOUNDS.temperature.min &&
-                                temperature <= PLAUSIBILITY_BOUNDS.temperature.max;
-
-      const humidityVaild = humidity >= PLAUSIBILITY_BOUNDS.humidity.min &&
-                            humidity <= PLAUSIBILITY_BOUNDS.humidity.max;
-
-      const accurate = temperatureVaild && humidityVaild;
-
-      if (!accurate) {
-        console.log(`[DeviceMonitor ${this.wotEndpoint}] Inaccurate reading detected - ` +
-          `temperature: ${temperature}, humidity: ${humidity}`
-         )
+      if (!td.properties) {
+         console.warn(`[DeviceMonitor ${this.wotEndpoint}] No properties found in TD to evaluate.`);
+         return;
       }
 
-      this.contractService.submitAccuracyReport(this.deviceId, accurate, eventId);
+      for (const propName of Object.keys(td.properties)) {
+        const propSchema = td.properties[propName];
+
+        if (propSchema.type === 'number' || propSchema.type === 'integer') {
+          let value: number;
+
+          try {
+            const rawValue = await this.thing.readProperty(propName);
+            value = await rawValue.value(); 
+          } catch (validationError: any) {
+            console.log(`[DeviceMonitor ${this.wotEndpoint}] W3C Schema Violation on '${propName}': Device output rejected by W3C validator.`);
+            accurate = false;
+            continue;
+          }
+
+          const min = propSchema.minimum;
+          const max = propSchema.maximum;
+
+          if (min !== undefined && value < min) {
+             console.log(`[DeviceMonitor ${this.wotEndpoint}] Inaccurate reading: '${propName}' value ${value} is below minimum ${min}`);
+             accurate = false;
+          }
+          
+          if (max !== undefined && value > max) {
+             console.log(`[DeviceMonitor ${this.wotEndpoint}] Inaccurate reading: '${propName}' value ${value} is above maximum ${max}`);
+             accurate = false;
+          }
+        }
+      }
+
+      if (accurate) {
+        console.log(`[DeviceMonitor ${this.wotEndpoint}] All property readings are within acceptable bounds.`);
+      } else {
+        console.log(`[DeviceMonitor ${this.wotEndpoint}] Device penalized for anomalous readings.`);
+      }
+
+      await this.contractService.submitAccuracyReport(this.deviceId, accurate, eventId);
+      
     } catch (error) {
-      console.error(`[DeviceMonitor ${this.wotEndpoint}] Failed to read device properties: `, error);
+      console.error(`[DeviceMonitor ${this.wotEndpoint}] Failed to evaluate accuracy dynamically: `, error);
     }
   }
 }
