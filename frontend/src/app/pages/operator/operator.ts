@@ -68,6 +68,7 @@ export class OperatorComponent {
       this.registeredName = this.operatorName;
       this.registerState = 'success';
     } catch (error: any) {
+      console.error("RAW WALLET ERROR:", error);
       this.registerState = 'error';
       this.registerError = this.parseError(error);
     }
@@ -98,6 +99,7 @@ export class OperatorComponent {
       this.deviceEndpoint = '';
       this.deviceType = '';
     } catch (error: any) {
+      console.error("RAW WALLET ERROR:", error);
       this.enrollState = 'error';
       this.enrollError = this.parseError(error);
     }
