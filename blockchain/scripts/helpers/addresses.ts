@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
 
-const DEPLOYMENTS_FILE = path.join(__dirname, "../../../deployments.json");
+const DEPLOYMENTS_FILE = process.env.DEPLOYMENTS_PATH
+  || path.join(__dirname, "../../../deployments.json");
 
 type Deployments = {
   [network: string]: {

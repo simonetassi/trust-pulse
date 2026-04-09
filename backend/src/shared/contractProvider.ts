@@ -2,12 +2,11 @@ import { ethers } from "ethers";
 import * as fs from "fs";
 import * as path from "path";
 
-const artifactPath = path.join(
-  process.cwd(),
-  "../blockchain/artifacts/contracts/ChainReputation.sol/ChainReputation.json"
-);
-const deploymentsPath = path.join(__dirname, "../../../deployments.json");
+const artifactPath = process.env.ARTIFACTS_PATH
+  ? path.join(process.env.ARTIFACTS_PATH, "contracts/ChainReputation.sol/ChainReputation.json")
+  : path.join(__dirname, "../../../../blockchain/artifacts/contracts/ChainReputation.sol/ChainReputation.json");
 
+const deploymentsPath = process.env.DEPLOYMENTS_PATH || path.join(__dirname, "../../../deployments.json");
 let contractInstance: ethers.Contract | null = null;
 
 export function getContract(): ethers.Contract {

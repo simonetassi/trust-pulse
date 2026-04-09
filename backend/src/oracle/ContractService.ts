@@ -2,15 +2,13 @@ import { ethers, NonceManager } from "ethers";
 import * as fs from "fs";
 import * as path from "path";
 
-const artifactPath = path.join(
-  __dirname,
-  "../../../blockchain/artifacts/contracts/ChainReputation.sol/ChainReputation.json"
-);
+const artifactPath = process.env.ARTIFACTS_PATH
+  ? path.join(process.env.ARTIFACTS_PATH, "contracts/ChainReputation.sol/ChainReputation.json")
+  : path.join(__dirname, "../../../../blockchain/artifacts/contracts/ChainReputation.sol/ChainReputation.json");
 
 const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
 
-const deploymentsPath = path.join(__dirname, "../../../deployments.json");
-
+const deploymentsPath = process.env.DEPLOYMENTS_PATH || path.join(__dirname, "../../../deployments.json");
 function loadContractAddress(network: string): string {
   const deployments = JSON.parse(fs.readFileSync(deploymentsPath, "utf-8"));
   const address = deployments[network]?.ChainReputation;

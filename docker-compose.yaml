@@ -1,0 +1,93 @@
+volumes:
+  shared-data:
+
+services:
+  blockchain:
+    build: ./blockchain
+    ports:
+      - "8545:8545"
+    environment:
+      - DEPLOYMENTS_PATH=/shared/deployments.json
+    volumes:
+      - shared-data:/shared
+  
+  contract-setup:
+    build: ./blockchain
+    command: npm run setup:local
+    environment:
+      - RPC_URL=http://blockchain:8545
+      - DEPLOYMENTS_PATH=/shared/deployments.json
+      - FRONTEND_ASSETS_PATH=/shared
+      - BACKEND_ARTIFACTS_PATH=/shared/artifacts
+    volumes:
+      - shared-data:/shared
+
+  wot-network:
+    build: ./backend
+    command: npm run start:wot
+    ports:
+      - "8081:8081"
+      - "8082:8082"
+      - "8083:8083"
+
+  api:
+    build: ./backend
+    command: npm run start:api
+    ports:
+      - "3000:3000"
+    environment:
+      - NETWORK=localhost
+      - RPC_URL=http://blockchain:8545
+      - DEPLOYMENTS_PATH=/shared/deployments.json
+      - ARTIFACTS_PATH=/shared/artifacts
+    volumes:
+      - shared-data:/shared
+    depends_on:
+      contract-setup:
+        condition: service_completed_successfully
+
+  oracle-1:
+    build: ./backend
+    command: npm run start:oracle
+    environment:
+      - NETWORK=localhost
+      - RPC_URL=http://blockchain:8545
+      - ORACLE_PRIVATE_KEY=${ORACLE_1_KEY:-0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d}
+      - DEPLOYMENTS_PATH=/shared/deployments.json
+      - ARTIFACTS_PATH=/shared/artifacts
+    volumes:
+      - shared-data:/shared
+    depends_on:
+      wot-network:
+        condition: service_started
+      contract-setup:
+        condition: service_completed_successfully
+
+  oracle-2:
+    build: ./backend
+    command: npm run start:oracle
+    environment:
+      - NETWORK=localhost
+      - RPC_URL=http://blockchain:8545
+      - ORACLE_PRIVATE_KEY=${ORACLE_2_KEY:-0xde9be858da4a475276426320d5e9262ecfc3ba460bfac56360bfa6c4c28b4ee0}
+      - DEPLOYMENTS_PATH=/shared/deployments.json
+      - ARTIFACTS_PATH=/shared/artifacts
+    volumes:
+      - shared-data:/shared
+    depends_on:
+      wot-network:
+        condition: service_started
+      contract-setup:
+        condition: service_completed_successfully
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    volumes:
+      - shared-data:/usr/share/nginx/html/assets
+    depends_on:
+      contract-setup:
+        condition: service_completed_successfully
+      api:
+        condition: service_started
