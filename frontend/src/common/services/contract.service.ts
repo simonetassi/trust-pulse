@@ -1,14 +1,33 @@
 import { inject, Injectable } from "@angular/core";
-
-import ChainReputationAbi from '../../../../blockchain/artifacts/contracts/ChainReputation.sol/ChainReputation.json';
-import deployments from '../../../../deployments.json';
 import { WalletService } from "./wallet.service";
 import { ethers } from "ethers";
-import { environment } from "../../environments/environment";
+import { HttpClient } from "@angular/common/http";
+import { firstValueFrom } from "rxjs";
 
 @Injectable({ providedIn: 'root' })
 export class ContractService {
   private readonly wallet = inject(WalletService);
+  private readonly http = inject(HttpClient);
+
+  private abi: any = null;
+  private contractAddress: string | null = null;
+
+  async initialize(): Promise<void> {
+    const [artifact, deployments] = await Promise.all([
+      firstValueFrom(this.http.get('/assets/ChainReputation.json')),
+      firstValueFrom(this.http.get<any>('/assets/deployments.json'))
+    ]);
+
+    this.abi = (artifact as any).abi;
+    this.contractAddress = deployments['localhost']?.ChainReputation;
+
+    if (!this.contractAddress) {
+      throw new Error('Contract address not found in deployments.json');
+    }
+
+    console.log('[ContractService] Initialized at', this.contractAddress);
+  }
+
 
   public async getOperator(address: string): Promise<{
     name: string;
@@ -43,13 +62,13 @@ export class ContractService {
   }
   
   private getContract(): ethers.Contract {
-    const signer = this.wallet.getSigner();
-    const address = (deployments as any)[environment.network]?.ChainReputation;
-
-    if (!address) {
-      throw new Error(`No deployment found for network: ${environment.network}`);
+    if (!this.abi || !this.contractAddress) {
+      throw new Error('ContractService not initialized. Call initialize() first.');
     }
-
-    return new ethers.Contract(address, ChainReputationAbi.abi, signer);
+    return new ethers.Contract(
+      this.contractAddress,
+      this.abi,
+      this.wallet.getSigner()
+    );
   }
 }
