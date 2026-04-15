@@ -1,8 +1,8 @@
 export const environment = {
-  production: true,
+  production: false,
   apiUrl: 'http://localhost:3000',
-  wsUrl: 'http://localhost:3000',
-  network: 'localhost',
-  hardhatChainId: 31337,
+  wsUrl: 'ws://localhost:3000',
+  network: 'sepolia',
+  hardhatChainId: 11155111,
   operatorAddress: '',
 };

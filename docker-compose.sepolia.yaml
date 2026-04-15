@@ -1,0 +1,89 @@
+services:
+  wot-network:
+    build: ./backend
+    command: npm run start:wot
+    ports:
+      - "8081:8081"
+      - "8082:8082"
+      - "8083:8083"
+
+  api:
+    build: ./backend
+    command: npm run start:api
+    ports:
+      - "3000:3000"
+    environment:
+      - NETWORK=sepolia
+      - RPC_URL=${SEPOLIA_RPC_URL}
+      - DEPLOYMENTS_PATH=/app/deployments.json
+      - ARTIFACTS_PATH=/app/artifacts
+    volumes:
+      - ./deployments.json:/app/deployments.json
+      - ./blockchain/artifacts:/app/artifacts
+    extra_hosts:
+      - "localhost:host-gateway"
+      - "127.0.0.1:host-gateway"
+
+  oracle-1:
+    build: ./backend
+    command: npm run start:oracle
+    environment:
+      - NETWORK=sepolia
+      - RPC_URL=${SEPOLIA_RPC_URL}
+      - ORACLE_PRIVATE_KEY=${ORACLE_1_KEY}
+      - DEPLOYMENTS_PATH=/app/deployments.json
+      - ARTIFACTS_PATH=/app/artifacts
+    volumes:
+      - ./deployments.json:/app/deployments.json
+      - ./blockchain/artifacts:/app/artifacts
+    depends_on:
+      wot-network:
+        condition: service_started
+    extra_hosts:
+      - "localhost:host-gateway"
+      - "127.0.0.1:host-gateway"
+
+  oracle-2:
+    build: ./backend
+    command: npm run start:oracle
+    environment:
+      - NETWORK=sepolia
+      - RPC_URL=${SEPOLIA_RPC_URL}
+      - ORACLE_PRIVATE_KEY=${ORACLE_2_KEY}
+      - DEPLOYMENTS_PATH=/app/deployments.json
+      - ARTIFACTS_PATH=/app/artifacts
+    volumes:
+      - ./deployments.json:/app/deployments.json
+      - ./blockchain/artifacts:/app/artifacts
+    depends_on:
+      wot-network:
+        condition: service_started
+    extra_hosts:
+      - "localhost:host-gateway"
+      - "127.0.0.1:host-gateway"
+
+  oracle-3:
+    build: ./backend
+    command: npm run start:oracle
+    environment:
+      - NETWORK=sepolia
+      - RPC_URL=${SEPOLIA_RPC_URL}
+      - ORACLE_PRIVATE_KEY=${ORACLE_3_KEY}
+      - DEPLOYMENTS_PATH=/app/deployments.json
+      - ARTIFACTS_PATH=/app/artifacts
+    volumes:
+      - ./deployments.json:/app/deployments.json
+      - ./blockchain/artifacts:/app/artifacts
+    depends_on:
+      wot-network:
+        condition: service_started
+    extra_hosts:
+      - "localhost:host-gateway"
+      - "127.0.0.1:host-gateway"
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - api

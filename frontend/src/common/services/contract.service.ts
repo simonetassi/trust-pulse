@@ -3,6 +3,7 @@ import { WalletService } from "./wallet.service";
 import { ethers } from "ethers";
 import { HttpClient } from "@angular/common/http";
 import { firstValueFrom } from "rxjs";
+import { environment } from "../../environments/environment";
 
 @Injectable({ providedIn: 'root' })
 export class ContractService {
@@ -19,7 +20,7 @@ export class ContractService {
     ]);
 
     this.abi = (artifact as any).abi;
-    this.contractAddress = deployments['localhost']?.ChainReputation;
+    this.contractAddress = deployments[environment.network]?.ChainReputation;
 
     if (!this.contractAddress) {
       throw new Error('Contract address not found in deployments.json');

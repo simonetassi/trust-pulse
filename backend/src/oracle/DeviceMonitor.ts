@@ -9,10 +9,13 @@ export class DeviceMonitor {
   private heartbeatTimeout: NodeJS.Timeout | null = null;
   private isRunning: boolean = false;
   private isActive: boolean = true;
-  private lastSeenEventId: number = 0;
 
   private dynamicIntervalMs: number = 15000;
   private readonly HEARTBEAT_MULTIPLIER = 1.5;
+
+  private processedEpochs: Set<number> = new Set();
+  private consecutiveMisses: number = 0;
+  private readonly MAX_CONSECUTIVE_MISSES = 3; 
 
   public constructor(
     private wotEndpoint: string, 
@@ -21,6 +24,10 @@ export class DeviceMonitor {
       this.deviceId = ContractService.computeDeviceId(wotEndpoint);
       this.servient = new Servient();
       this.servient.addClientFactory(new HttpClientFactory);
+  }
+
+  private getCurrentEpoch(): number {
+    return Math.floor(Date.now() / this.dynamicIntervalMs);
   }
 
   public async start(): Promise<void> {
@@ -44,53 +51,37 @@ export class DeviceMonitor {
 
     this.resetHeartbeatTimeout();
 
-    await this.thing.subscribeEvent('heartbeat', async (data: any) => {
-      if(!this.isRunning) return;
+    await this.thing.subscribeEvent('heartbeat', async () => {
+      if(!this.isRunning || !this.isActive) return;
 
-      if (!this.isActive) {
-        console.log(`[DeviceMonitor ${this.wotEndpoint}] Skipping — device is inactive`);
+      const epochId = this.getCurrentEpoch();
+
+      if (this.processedEpochs.has(epochId)) {
+        console.log(`[DeviceMonitor] Ignored duplicate heartbeat for epoch ${epochId}`);
         return;
       }
+      
+      this.processedEpochs.add(epochId);
+      this.consecutiveMisses = 0;
+      this.cleanupMemory();
 
-      let payload: any;
-      try {
-        payload = await data.value();
-      } catch (error) {
-        console.error(`[DeviceMonitor] Failed to parse heartbeat data:`, error);
-        return; 
-      }
-
-      const eventId = payload?.eventId ?? Math.floor(Date.now() / 1000);
-      this.lastSeenEventId = eventId;
-
-      console.log(`[DeviceMonitor] ${this.wotEndpoint} Heartbeat recevied`)
-      console.log('eventId:', eventId);
-
+      console.log(`[DeviceMonitor] ${this.wotEndpoint} Heartbeat received. Epoch: ${epochId}`);
       this.resetHeartbeatTimeout();
 
-      await this.contractService.submitAvailabilityReport(this.deviceId, true, eventId);
-
-      await this.evaluateAccuracy(eventId);
-    })
+      await this.contractService.submitAvailabilityReport(this.deviceId, true, epochId);
+      await this.evaluateAccuracy(epochId);
+    });
   }
 
   public async stop(): Promise<void> {
     if (!this.isRunning) return;
-
     this.isRunning = false;
 
-    if (this.heartbeatTimeout) {
-      clearTimeout(this.heartbeatTimeout);
-      this.heartbeatTimeout = null
-    }
-
+    if (this.heartbeatTimeout) clearTimeout(this.heartbeatTimeout);
+    
     if (this.thing) {
-      try {
-        await this.thing.unsubscribeEvent("heartbeat");
-      } catch {
-      }
+      try { await this.thing.unsubscribeEvent("heartbeat"); } catch {}
     }
-  
 
     await this.servient.shutdown();
     console.log(`[DeviceMonitor ${this.wotEndpoint}] Stopped`);
@@ -99,11 +90,7 @@ export class DeviceMonitor {
   public markInactive(): void {
     console.log(`[DeviceMonitor ${this.wotEndpoint}] Marked as inactive`);
     this.isActive = false;
-
-    if (this.heartbeatTimeout) {
-      clearTimeout(this.heartbeatTimeout);
-      this.heartbeatTimeout = null;
-    }
+    if (this.heartbeatTimeout) clearTimeout(this.heartbeatTimeout);
   }
 
   public getDeviceId(): string {
@@ -111,76 +98,70 @@ export class DeviceMonitor {
   }
 
   private resetHeartbeatTimeout(): void {
-    if (this.heartbeatTimeout) {
-      clearTimeout(this.heartbeatTimeout);
-    }
+    if (this.heartbeatTimeout) clearTimeout(this.heartbeatTimeout);
 
     const timeoutThreshold = this.dynamicIntervalMs * this.HEARTBEAT_MULTIPLIER;
 
     this.heartbeatTimeout = setTimeout(async () => {
       if(!this.isRunning || !this.isActive) return;
 
-      const missingEventId = this.lastSeenEventId + 1;
-      this.lastSeenEventId = missingEventId;
+      const missedEpochId = this.getCurrentEpoch();
 
-      console.warn(`[DeviceMonitor] Heartbeat timeout. Penalizing EventID: ${missingEventId}`);
+      if (this.processedEpochs.has(missedEpochId)) return;
 
-      await this.contractService.submitAvailabilityReport(this.deviceId, false, missingEventId);
+      if (this.consecutiveMisses >= this.MAX_CONSECUTIVE_MISSES) {
+         console.warn(`[DeviceMonitor] Device offline for too long. Suspending penalties to save gas.`);
+         return; 
+      }
+
+      this.processedEpochs.add(missedEpochId);
+      this.consecutiveMisses++;
+      this.cleanupMemory();
+
+      console.warn(`[DeviceMonitor] Heartbeat timeout. Penalizing Epoch: ${missedEpochId}`);
+
+      await this.contractService.submitAvailabilityReport(this.deviceId, false, missedEpochId);
 
       this.resetHeartbeatTimeout();
     }, timeoutThreshold); 
   }
 
-  private async evaluateAccuracy(eventId: number): Promise<void> {
+  private async evaluateAccuracy(epochId: number): Promise<void> {
     try {
       let accurate = true;
       const td = await this.thing.getThingDescription();
 
-      if (!td.properties) {
-         console.warn(`[DeviceMonitor ${this.wotEndpoint}] No properties found in TD to evaluate.`);
-         return;
-      }
+      if (!td.properties) return;
 
       for (const propName of Object.keys(td.properties)) {
         const propSchema = td.properties[propName];
 
         if (propSchema.type === 'number' || propSchema.type === 'integer') {
           let value: number;
-
           try {
             const rawValue = await this.thing.readProperty(propName);
             value = await rawValue.value(); 
           } catch (validationError: any) {
-            console.log(`[DeviceMonitor ${this.wotEndpoint}] W3C Schema Violation on '${propName}': Device output rejected by W3C validator.`);
             accurate = false;
             continue;
           }
 
-          const min = propSchema.minimum;
-          const max = propSchema.maximum;
-
-          if (min !== undefined && value < min) {
-             console.log(`[DeviceMonitor ${this.wotEndpoint}] Inaccurate reading: '${propName}' value ${value} is below minimum ${min}`);
-             accurate = false;
-          }
-          
-          if (max !== undefined && value > max) {
-             console.log(`[DeviceMonitor ${this.wotEndpoint}] Inaccurate reading: '${propName}' value ${value} is above maximum ${max}`);
-             accurate = false;
-          }
+          if (propSchema.minimum !== undefined && value < propSchema.minimum) accurate = false;
+          if (propSchema.maximum !== undefined && value > propSchema.maximum) accurate = false;
         }
       }
 
-      if (accurate) {
-        console.log(`[DeviceMonitor ${this.wotEndpoint}] All property readings are within acceptable bounds.`);
-      } else {
-        console.log(`[DeviceMonitor ${this.wotEndpoint}] Device penalized for anomalous readings.`);
-      }
-
-      await this.contractService.submitAccuracyReport(this.deviceId, accurate, eventId);
+      await this.contractService.submitAccuracyReport(this.deviceId, accurate, epochId);
       
     } catch (error) {
-      console.error(`[DeviceMonitor ${this.wotEndpoint}] Failed to evaluate accuracy dynamically: `, error);
+      console.error(`[DeviceMonitor ${this.wotEndpoint}] Failed to evaluate accuracy:`, error);
+    }
+  }
+
+  private cleanupMemory() {
+    if (this.processedEpochs.size > 20) {
+      const epochs = Array.from(this.processedEpochs).sort();
+      this.processedEpochs = new Set(epochs.slice(-5));
     }
   }
 }

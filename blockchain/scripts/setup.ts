@@ -1,4 +1,4 @@
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -22,10 +22,12 @@ const devices = [
 
 async function main() {
   const deployments = JSON.parse(fs.readFileSync(deploymentsPath, "utf8"));
-  const contractAddress = deployments["localhost"]?.ChainReputation;
+
+  const currentNetwork = network.name;
+  const contractAddress = deployments[currentNetwork]?.ChainReputation;
 
   if (!contractAddress) {
-    throw new Error("No localhost deployment found. Run the deploy script first.");
+    throw new Error(`No deployment found for network: ${currentNetwork}`);
   }
 
   const [, , operator] = await ethers.getSigners();

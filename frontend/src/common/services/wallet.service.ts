@@ -47,7 +47,6 @@ export class WalletService {
 
     try {
       this.provider = new ethers.BrowserProvider(window.ethereum);
-
       await this.provider.send('eth_requestAccounts', []);
 
       this.signer = await this.provider.getSigner();
@@ -56,9 +55,13 @@ export class WalletService {
 
       this.address.set(address);
       this.chainId.set(Number(network.chainId));
-      this.state.set(
-        this.isCorrectNetwork(Number(network.chainId)) ? 'connected' : 'wrong-network'
-      );
+
+      if (!this.isCorrectNetwork(Number(network.chainId))) {
+        await this.forceNetworkSwitch();
+      } else {
+        this.state.set('connected');
+      }
+
     } catch (error) {
       this.state.set('disconnected');
       throw error;
@@ -107,12 +110,31 @@ export class WalletService {
       }
     });
 
-    // TODO fix - not working atm
     window.ethereum.on('chainChanged', (chainIdHex: string) => {
-      console.log('prova')
       const chainId = parseInt(chainIdHex, 16);
       this.chainId.set(chainId);
-    })
+      
+      if (this.address()) {
+        this.state.set(
+          this.isCorrectNetwork(chainId) ? 'connected' : 'wrong-network'
+        );
+      }
+    });
+  }
+
+  private async forceNetworkSwitch(): Promise<void> {
+    try {
+      const targetChainIdHex = '0x' + environment.hardhatChainId.toString(16);
+      
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: targetChainIdHex }],
+      });
+         
+    } catch (error: any) {
+      console.error("Network switch rejected or failed", error);
+      this.state.set('wrong-network');
+    }
   }
 
 }

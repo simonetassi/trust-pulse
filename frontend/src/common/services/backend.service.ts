@@ -2,7 +2,7 @@ import { HttpClient } from "@angular/common/http";
 import { inject, Injectable } from "@angular/core";
 import { environment } from "../../environments/environment";
 import { Observable } from "rxjs";
-import { Device, DeviceHistory, ReputationScore } from "../interfaces";
+import { Device, DeviceHistory, ReputationScore, ValidationResponse } from "../interfaces";
 import { OperatorDevices } from "../interfaces/operator";
 
 @Injectable({ providedIn: 'root'})
@@ -28,5 +28,9 @@ export class BackendService {
 
   public getAllDevices(): Observable<{ devices: Device[] }> {
     return this.http.get<{ devices: Device[] }>(`${this.base}/api/devices`);
+  }
+
+  public validateThingDescription(endpoint: string) {
+    return this.http.post<ValidationResponse>(`${this.base}/api/devices/validate-td`,{ endpoint });
   }
 }

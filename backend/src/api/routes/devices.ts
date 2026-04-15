@@ -60,37 +60,53 @@ devicesRouter.get('/:deviceId/history', async (req: Request, res: Response) => {
     const contract = getContract();
     const { deviceId } = req.params;
 
+    const provider = contract.runner?.provider;
+    if (!provider) {
+      throw new Error("Blockchain provider is not initialized.");
+    }
+
+    const currentBlock = await provider.getBlockNumber();
+    const network = await provider.getNetwork();
+    const chainId = Number(network.chainId);
+
+    let fromBlock: number;
+    if (chainId === 31337) {
+      fromBlock = 0;
+    } else {
+      fromBlock = Math.max(0, currentBlock - 9); // Sepolia / Public RPC: Strict 10-block limit
+    }
+
     const accuracyFilter = contract.filters.AccuracyReported(deviceId);
     const availabilityFilter = contract.filters.AvailabilityReported(deviceId);
 
-    // querying from block 0 to get all events
     const [accuracyEvents, availabilityEvents] = await Promise.all([
-      contract.queryFilter(accuracyFilter, 0),
-      contract.queryFilter(availabilityFilter, 0)
+      contract.queryFilter(accuracyFilter, fromBlock, 'latest'),
+      contract.queryFilter(availabilityFilter, fromBlock, 'latest')
     ]);
 
     const history = [
       ...accuracyEvents.map((event: any) => ({
         type: 'accuracy',
-        accurate: event.args.accurate,
-        newScore: Number(event.args.newScore),
-        blockNumber: event.blockNumber,
+        accurate: Boolean(event.args.accurate),
+        newScore: Number(event.args.newScore), 
+        blockNumber: Number(event.blockNumber), 
         txHash: event.transactionHash,
       })),
       ...availabilityEvents.map((event: any) => ({
         type: 'availability',
-        available: event.args.available,
-        newScore: Number(event.args.newScore),
-        blockNumber: event.blockNumber,
+        available: Boolean(event.args.available),
+        newScore: Number(event.args.newScore), 
+        blockNumber: Number(event.blockNumber), 
         txHash: event.transactionHash,
       }))
-    ].sort((a, b) => (a.blockNumber - b.blockNumber));
+    ].sort((a, b) => a.blockNumber - b.blockNumber);
 
     res.json({ deviceId, history });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error(`[Device History Error - ${req.params.deviceId}]:`, error);
+    res.status(500).json({ error: "Failed to fetch device history", details: error.message });
   }
-})
+});
 
 // GET ALL DEVICES
 devicesRouter.get('/', async (req: Request, res: Response) => {
@@ -119,5 +135,57 @@ devicesRouter.get('/', async (req: Request, res: Response) => {
     res.json({ devices });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+devicesRouter.post('/validate-td', async (req: Request, res: Response) => {
+  const { endpoint } = req.body;
+
+  if (!endpoint) {
+    return res.status(400).json({ valid: false, reason: "Endpoint URL is required." });
+  }
+
+  try {
+    const response = await fetch(endpoint);
+    
+    if (!response.ok) {
+      return res.status(400).json({ valid: false, reason: `HTTP Status: ${response.status}` });
+    }
+
+    const td = await response.json();
+
+    if (!td || typeof td !== 'object' || !td.properties) {
+      return res.status(400).json({ valid: false, reason: "Invalid TD: Missing 'properties' schema." });
+    }
+
+    const hbSchema = td.properties['heartbeatInterval'];
+    if (!hbSchema) {
+      return res.status(400).json({ valid: false, reason: "Invalid TD: Missing required 'heartbeatInterval' property." });
+    }
+    if (hbSchema.type !== 'number' && hbSchema.type !== 'integer') {
+      return res.status(400).json({ valid: false, reason: "Invalid TD: 'heartbeatInterval' must be a numeric type." });
+    }
+
+    for (const [propName, propSchema] of Object.entries<any>(td.properties)) {
+      if (propSchema.type === 'number' || propSchema.type === 'integer') {
+        if (propName !== 'heartbeatInterval') {
+          if (propSchema.minimum === undefined || propSchema.maximum === undefined) {
+            return res.status(400).json({ valid: false, reason: `Invalid Schema: Numeric property '${propName}' is missing min/max bounds.` });
+          }
+          if (propSchema.minimum >= propSchema.maximum) {
+            return res.status(400).json({ valid: false, reason: `Invalid Schema: '${propName}' min >= max.` });
+          }
+        }
+      }
+    }
+
+    return res.json({ valid: true });
+
+  } catch (error: any) {
+    console.error("Backend TD Validation Error:", error.message);
+    return res.status(500).json({ 
+      valid: false, 
+      reason: "Network error. Make sure the WoT device simulator is running and the URL is correct." 
+    });
   }
 });
