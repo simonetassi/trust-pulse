@@ -17,7 +17,7 @@ export const simulationProfiles: SimulatorProfile[] = [
     id: "sensor-01",
     port: 8081,
     title: "Agricultural Weather Station",
-    heartbeatInterval: 10000,
+    heartbeatInterval: 60000,
     properties: {
       temperature: { type: 'number', minimum: -10, maximum: 50 },
       humidity: { type: 'number', minimum: 0, maximum: 100 }
@@ -27,7 +27,7 @@ export const simulationProfiles: SimulatorProfile[] = [
     id: "sensor-02",
     port: 8082,
     title: "Industrial Pressure Valve",
-    heartbeatInterval: 8000,
+    heartbeatInterval: 30000,
     properties: {
       pressurePSI: { type: 'number', minimum: 200, maximum: 800 }
     }
@@ -36,7 +36,7 @@ export const simulationProfiles: SimulatorProfile[] = [
     id: "sensor-03",
     port: 8083,
     title: "Smart Door Lock",
-    heartbeatInterval: 15000,
+    heartbeatInterval: 40000,
     properties: {
       isLocked: { type: 'boolean' }
     }
