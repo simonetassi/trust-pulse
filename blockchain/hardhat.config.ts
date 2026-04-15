@@ -13,8 +13,13 @@ const config: HardhatUserConfig = {
       url: process.env.RPC_URL || "http://127.0.0.1:8545",
     },
     sepolia: {
-      url: process.env.SEPOLIA_RPC_URL ?? "",
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
+      url: process.env.SEPOLIA_RPC_URL || "",
+      accounts: [
+        process.env.DEPLOYER_KEY || "",
+        process.env.ORACLE_1_KEY || "",
+        process.env.ORACLE_2_KEY || "",
+        process.env.ORACLE_3_KEY || "" 
+      ]
     }
   },
   etherscan: {
