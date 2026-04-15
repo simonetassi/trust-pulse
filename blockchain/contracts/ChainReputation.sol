@@ -184,8 +184,6 @@ contract ChainReputation {
     require(!hasVotedAvailability[deviceId][eventId][msg.sender], "Oracle already voted for this event");
     hasVotedAvailability[deviceId][eventId][msg.sender] = true;
 
-    hasVotedAvailability[deviceId][eventId][msg.sender] = true;
-
     ReportTally storage tally = eventTallies[deviceId][eventId];
 
     if (available) {
