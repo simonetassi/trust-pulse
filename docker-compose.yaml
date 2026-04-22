@@ -52,7 +52,7 @@ services:
     environment:
       - NETWORK=localhost
       - RPC_URL=http://blockchain:8545
-      - ORACLE_PRIVATE_KEY=${ORACLE_1_KEY:-0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d}
+      - ORACLE_PRIVATE_KEY=${HARDHAT_ORACLE_1_KEY}
       - DEPLOYMENTS_PATH=/shared/deployments.json
       - ARTIFACTS_PATH=/shared/artifacts
     volumes:
@@ -69,7 +69,24 @@ services:
     environment:
       - NETWORK=localhost
       - RPC_URL=http://blockchain:8545
-      - ORACLE_PRIVATE_KEY=${ORACLE_2_KEY:-0xde9be858da4a475276426320d5e9262ecfc3ba460bfac56360bfa6c4c28b4ee0}
+      - ORACLE_PRIVATE_KEY=${HARDHAT_ORACLE_2_KEY}
+      - DEPLOYMENTS_PATH=/shared/deployments.json
+      - ARTIFACTS_PATH=/shared/artifacts
+    volumes:
+      - shared-data:/shared
+    depends_on:
+      wot-network:
+        condition: service_started
+      contract-setup:
+        condition: service_completed_successfully
+  
+  oracle-3:
+    build: ./backend
+    command: npm run start:oracle
+    environment:
+      - NETWORK=localhost
+      - RPC_URL=http://blockchain:8545
+      - ORACLE_PRIVATE_KEY=${HARDHAT_ORACLE_3_KEY}
       - DEPLOYMENTS_PATH=/shared/deployments.json
       - ARTIFACTS_PATH=/shared/artifacts
     volumes:
@@ -83,7 +100,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "80:80"
+      - "4200:80"
     volumes:
       - shared-data:/usr/share/nginx/html/assets
     depends_on:
