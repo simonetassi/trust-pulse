@@ -33,6 +33,13 @@ export class OracleManager {
     console.log(`[OracleManager] Sync complete. All active monitors running.`);
   }
 
+  public async stopAll(): Promise<void> {
+    console.log(`Stopping all monitors`);
+    Array.from(this.monitors.values()).forEach((monitor) => monitor.stop());
+
+    this.monitors.clear();
+  }
+
   private listenForNewDevices(): void {
     const contract = this.contractService.getContractInstance();
     
