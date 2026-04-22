@@ -1,3 +1,4 @@
+import "hardhat-gas-reporter";
 import * as dotenv from "dotenv";
 import path from "path";
 dotenv.config({ path: path.join(__dirname, "../.env") });
@@ -15,15 +16,20 @@ const config: HardhatUserConfig = {
     sepolia: {
       url: process.env.SEPOLIA_RPC_URL || "",
       accounts: [
-        process.env.DEPLOYER_KEY || "",
-        process.env.ORACLE_1_KEY || "",
-        process.env.ORACLE_2_KEY || "",
-        process.env.ORACLE_3_KEY || "" 
+        process.env.DEPLOYER_KEY || "0x0000000000000000000000000000000000000000000000000000000000000001",
+        process.env.ORACLE_1_KEY || "0x0000000000000000000000000000000000000000000000000000000000000001",
+        process.env.ORACLE_2_KEY || "0x0000000000000000000000000000000000000000000000000000000000000001",
+        process.env.ORACLE_3_KEY || "0x0000000000000000000000000000000000000000000000000000000000000001" 
       ]
     }
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY ?? ""
+  },
+  gasReporter: {
+    enabled: true,
+    currency: 'USD',
+    excludeContracts: [],
   },
   typechain: {
     outDir: "typechain-types",
