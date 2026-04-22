@@ -3,20 +3,20 @@ import * as fs from "fs";
 import * as path from "path";
 
 const deploymentsPath = process.env.DEPLOYMENTS_PATH
-  || path.join(__dirname, "../../../deployments.json");
+  || path.join(__dirname, "../../deployments.json");
 
 const devices = [
   {
     wotEndpoint: "http://wot-network:8081/sensor-01",
-    deviceType: "temperature-humidity-sensor"
+    deviceType: "Sensor"
   },
   {
     wotEndpoint: "http://wot-network:8082/sensor-02",
-    deviceType: "temperature-humidity-sensor"
+    deviceType: "Sensor"
   },
   {
     wotEndpoint: "http://wot-network:8083/sensor-03",
-    deviceType: "temperature-humidity-sensor"
+    deviceType: "Sensor"
   }
 ];
 
@@ -62,7 +62,7 @@ async function main() {
   // In Docker: FRONTEND_ASSETS_PATH=/shared
   // Locally:   frontend/src/assets
   const frontendAssetsDir = process.env.FRONTEND_ASSETS_PATH
-    || path.join(__dirname, "../../../frontend/src/assets");
+    || path.join(__dirname, "../../frontend/src/assets");
 
   // Backend artifacts — ABI lands here
   // In Docker: BACKEND_ARTIFACTS_PATH=/shared/artifacts
