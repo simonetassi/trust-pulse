@@ -2,7 +2,7 @@ import { Component, effect, inject, OnDestroy, OnInit } from '@angular/core';
 import { Device } from '../../../common/interfaces';
 import { ReputationCard } from "./components/reputation-card/reputation-card";
 import { BackendService } from '../../../common/services/backend.service';
-import { Subscription } from 'rxjs';
+import { lastValueFrom, Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { SocketService } from '../../../common/services/socket.service';
 import { RouterLink } from '@angular/router';
@@ -78,21 +78,21 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   private listenSocketEvents(): void {
-    const accuracySub = this.socket.onAccuracyReport().subscribe(event => {
+    const accuracySub = this.socket.onAccuracyReport().subscribe(async event => {
       const device = this.devices.find(d => d.deviceId === event.deviceId);
       if (device) {
         device.accuracyScore = event.newAccuracyScore;
-        device.compositeScore = this.computeComposite(device.accuracyScore, device.availabilityScore);
+        device.compositeScore = (await lastValueFrom(this.backend.getReputation(device.deviceId))).composite;
         device.totalReports++;
       }
       this.sortDevices();
     });
 
-    const availabilitySub = this.socket.onAvailabilityReport().subscribe(event => {
+    const availabilitySub = this.socket.onAvailabilityReport().subscribe(async event => {
       const device = this.devices.find(d => d.deviceId === event.deviceId);
       if (device) {
         device.availabilityScore = event.newAvailabilityScore;
-        device.compositeScore = this.computeComposite(device.accuracyScore, device.availabilityScore);
+        device.compositeScore = (await lastValueFrom(this.backend.getReputation(device.deviceId))).composite;
       }
       this.sortDevices();
     });
@@ -107,11 +107,6 @@ export class Dashboard implements OnInit, OnDestroy {
     this.subscription.add(accuracySub);
     this.subscription.add(availabilitySub);
     this.subscription.add(deactivatedSub);
-  }
-
-  // TODO transfer this logic to backend??
-  private computeComposite(accuracy: number, availability: number): number {
-    return Math.round((accuracy * 60 + availability * 40) / 100);
   }
 
   public get avgAccuracy(): number {
