@@ -35,8 +35,7 @@ export class OracleManager {
 
   public async stopAll(): Promise<void> {
     console.log(`Stopping all monitors`);
-    Array.from(this.monitors.values()).forEach((monitor) => monitor.stop());
-
+    await Promise.all(Array.from(this.monitors.values()).map(monitor => monitor.stop()));
     this.monitors.clear();
   }
 
