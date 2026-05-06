@@ -115,7 +115,7 @@ export class DeviceDetailComponent implements OnInit, OnDestroy {
 
       this.history = [{
         type: 'availability',
-        online: event.available,
+        available: event.available,
         newScore: event.newAvailabilityScore,
         blockNumber: 0,
         txHash: event.txHash
