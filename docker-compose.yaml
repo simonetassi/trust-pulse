@@ -98,7 +98,10 @@ services:
         condition: service_completed_successfully
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        BUILD_CONFIG: ${FRONTEND_BUILD_CONFIG:-development}
     ports:
       - "4200:80"
     volumes:
