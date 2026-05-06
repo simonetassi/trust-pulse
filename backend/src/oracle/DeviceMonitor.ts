@@ -51,25 +51,31 @@ export class DeviceMonitor {
 
     this.resetHeartbeatTimeout();
 
-    await this.thing.subscribeEvent('heartbeat', async () => {
+    await this.thing.subscribeEvent('heartbeat', async (data: any) => {
       if(!this.isRunning || !this.isActive) return;
 
-      const epochId = this.getCurrentEpoch();
+      let eventId: number;
+      try {
+        const payload = await data.value();
+        eventId = typeof payload?.eventId === 'number' ? payload.eventId : this.getCurrentEpoch();
+      } catch {
+        eventId = this.getCurrentEpoch();
+      }
 
-      if (this.processedEpochs.has(epochId)) {
-        console.log(`[DeviceMonitor] Ignored duplicate heartbeat for epoch ${epochId}`);
+      if (this.processedEpochs.has(eventId)) {
+        console.log(`[DeviceMonitor] Ignored duplicate heartbeat for eventId ${eventId}`);
         return;
       }
-      
-      this.processedEpochs.add(epochId);
+
+      this.processedEpochs.add(eventId);
       this.consecutiveMisses = 0;
       this.cleanupMemory();
 
-      console.log(`[DeviceMonitor] ${this.wotEndpoint} Heartbeat received. Epoch: ${epochId}`);
+      console.log(`[DeviceMonitor] ${this.wotEndpoint} Heartbeat received. EventId: ${eventId}`);
       this.resetHeartbeatTimeout();
 
-      await this.contractService.submitAvailabilityReport(this.deviceId, true, epochId);
-      await this.evaluateAccuracy(epochId);
+      await this.contractService.submitAvailabilityReport(this.deviceId, true, eventId);
+      await this.evaluateAccuracy(eventId);
     });
   }
 
