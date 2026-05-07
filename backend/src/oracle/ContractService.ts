@@ -61,25 +61,25 @@ export class ContractService {
   }
 
   public async submitAccuracyReport(deviceId: string, accurate: boolean, eventId: number): Promise<void> {
-    this.enqueue('submitAccuracyReport', deviceId, async () => {
+    return this.enqueue('submitAccuracyReport', deviceId, async () => {
       const tx = await this.contract.submitAccuracyReport(deviceId, accurate, eventId, { gasLimit: 500000 });
       await tx.wait();
 
       console.log(`Accuracy report submitted ` +
         `deviceId: ${deviceId.slice(0, 10)}... accurate: ${accurate} tx: ${tx.hash}`
       );
-    })
+    });
   }
 
   public async submitAvailabilityReport(deviceId: string, available: boolean, eventId: number): Promise<void> {
-    this.enqueue('submitAvailabilityReport', deviceId, async () => {
+    return this.enqueue('submitAvailabilityReport', deviceId, async () => {
       const tx = await this.contract.submitAvailabilityReport(deviceId, available, eventId, { gasLimit: 500000 });
       await tx.wait();
 
       console.log(`Availability report submitted ` +
         `deviceId: ${deviceId.slice(0, 10)}... available: ${available} tx: ${tx.hash}`
       );
-    })
+    });
   }
 
   public async getReputation(deviceId: string): Promise<{
