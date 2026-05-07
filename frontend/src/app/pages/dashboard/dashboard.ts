@@ -19,6 +19,7 @@ export class Dashboard implements OnInit, OnDestroy {
   public readonly socket = inject(SocketService);
   public readonly wallet = inject(WalletService);
   private subscription = new Subscription();
+  private loadSubscription: Subscription | null = null;
 
   public devices: Device[] = [];
   public isLoading: boolean = false;
@@ -45,6 +46,7 @@ export class Dashboard implements OnInit, OnDestroy {
 
   public ngOnDestroy(): void {
     this.subscription.unsubscribe();
+    this.loadSubscription?.unsubscribe();
   }
 
   public toggleViewMode(mode: 'all' | 'mine'): void {
@@ -53,28 +55,27 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   private loadDevices(): void {
+    this.loadSubscription?.unsubscribe();
     this.isLoading = true;
     this.error = null;
-  
+
     const targetAddress = this.wallet.address() || environment.operatorAddress;
-  
-    const fetchObservable = this.viewMode === 'all' 
-      ? this.backend.getAllDevices() 
+
+    const fetchObservable = this.viewMode === 'all'
+      ? this.backend.getAllDevices()
       : this.backend.getOperatorDevices(targetAddress);
-  
-    const sub = fetchObservable.subscribe({
+
+    this.loadSubscription = fetchObservable.subscribe({
       next: (res) => {
         this.devices = res.devices;
         this.sortDevices();
         this.isLoading = false;
       },
-      error: (err) => {
+      error: () => {
         this.error = 'Could not load devices. Make sure the backend is running.';
         this.isLoading = false;
       }
     });
-  
-    this.subscription.add(sub);
   }
 
   private listenSocketEvents(): void {
@@ -93,6 +94,7 @@ export class Dashboard implements OnInit, OnDestroy {
       if (device) {
         device.availabilityScore = event.newAvailabilityScore;
         device.compositeScore = (await lastValueFrom(this.backend.getReputation(device.deviceId))).composite;
+        device.totalReports++;
       }
       this.sortDevices();
     });
