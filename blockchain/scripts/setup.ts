@@ -56,17 +56,10 @@ async function main() {
 
   console.log("\nSetup complete. All devices enrolled on-chain.");
 
-  // ─── Sync artifacts ───────────────────────────────────────────
-
-  // Frontend assets — files land flat at this path
-  // In Docker: FRONTEND_ASSETS_PATH=/shared
-  // Locally:   frontend/src/assets
+  // SYNC ARTIFACTS
   const frontendAssetsDir = process.env.FRONTEND_ASSETS_PATH
     || path.join(__dirname, "../../frontend/src/assets");
 
-  // Backend artifacts — ABI lands here
-  // In Docker: BACKEND_ARTIFACTS_PATH=/shared/artifacts
-  // Locally:   blockchain/artifacts (already exists, no copy needed)
   const backendArtifactsDir = process.env.BACKEND_ARTIFACTS_PATH
     || path.join(__dirname, "../artifacts");
 
