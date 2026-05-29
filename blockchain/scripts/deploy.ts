@@ -16,7 +16,7 @@ async function main() {
       accounts[2].address,
       accounts[18].address
     ];
-    console.log(`Oracles mapped to local accounts #1, #2, #3:`);
+    console.log(`Oracles mapped to local accounts #1, #2, #18:`);
     oracleAddresses.forEach((addr, i) => console.log(`  Oracle ${i + 1}: ${addr}`));
   } else {
     const oracle1 = process.env.ORACLE_1_ADDRESS;
